@@ -1,0 +1,3 @@
+check host <%= node[:monit][:hostname] %>-openmq with address 127.0.0.1
+  group servers
+  if failed port 7676 with timeout 10 seconds then alert

@@ -1,0 +1,5 @@
+maintainer	"Asim, Example.com"
+maintainer_email  "asim@example.com"
+license 		"jruby"
+description 	"Installs and configures jruby"
+version 		"0.7"

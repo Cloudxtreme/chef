@@ -1,0 +1,13 @@
+if [ -n "$JAVA_HOME" ]; then 
+    export IMQ_JAVAHOME=$JAVA_HOME
+elif [ -d /usr/local/java ]; then
+    export IMQ_JAVAHOME=/usr/local/java
+fi    
+
+SET_IMQ=true
+
+for dir in ${PATH//:/ }; do 
+    [ "$dir" == "/usr/local/openmq/mq/bin" ] && SET_IMQ=false
+done
+
+[ "$SET_IMQ" == "true" ] && export PATH=/usr/local/openmq/mq/bin:$PATH

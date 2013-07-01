@@ -1,0 +1,24 @@
+#!/bin/sh
+
+set -u 
+
+CLIENT="/usr/bin/gmetric "
+
+function mailq {
+  MAILQ_COMMAND="/usr/local/$1/bin/mailq"
+
+  MESSAGES_IN_QUEUE=`$MAILQ_COMMAND | egrep "(^--|empty)" | grep -v '@'`
+
+  QUEUE_NOT_EMPTY=`echo $MESSAGES_IN_QUEUE | grep -c empty`
+
+  if [ $QUEUE_NOT_EMPTY -eq 0 ]; then
+	QUEUE_SIZE=`echo $MESSAGES_IN_QUEUE | cut -f5 -d" "`	
+  else
+	QUEUE_SIZE=0
+  fi	
+
+  # echo "Queue Size is $QUEUE_SIZE"
+  if [ $1 ] ; then $CLIENT -t uint32 -n "Mail Queue $1" -v $QUEUE_SIZE -u messages ; fi
+}
+
+for j in `cat /etc/postfix.rc`; do mailq $j; sleep 2; done

@@ -1,0 +1,50 @@
+#!/bin/bash
+
+URL=http://127.0.0.1:82/nginx_status
+FILE=/tmp/nginx_stats
+TIME=60
+
+function read_old_file {
+    while read LINE; do 
+	if [[ $LINE =~ ([0-9]+)\ ([0-9]+)\ ([0-9]+)$ ]]; then
+	    old_accepts=${BASH_REMATCH[1]}
+	    old_handled=${BASH_REMATCH[2]}
+	    old_requests=${BASH_REMATCH[3]}
+	fi
+    done < $FILE
+}
+
+function read_new_file {
+    while read LINE; do 
+	if [[ $LINE =~ ^Active\ connections:\ ([0-9]+) ]]; then 
+	    active=${BASH_REMATCH[1]}
+	elif [[ $LINE =~ ([0-9]+)\ ([0-9]+)\ ([0-9]+)$ ]]; then
+	    new_accepts=${BASH_REMATCH[1]}
+	    new_handled=${BASH_REMATCH[2]}
+	    new_requests=${BASH_REMATCH[3]}
+	elif [[ $LINE =~ ^Reading:\ ([0-9]+)\ Writing:\ ([0-9]+)\ Waiting:\ ([0-9]+)$ ]]; then
+	    reading=${BASH_REMATCH[1]}
+	    writing=${BASH_REMATCH[2]}
+	    waiting=${BASH_REMATCH[3]}
+	fi
+    done < $FILE
+}
+
+function send_to_gmetric {
+    /usr/bin/gmetric -t uint32 -n "Nginx active connections" -v $active -u "connections" -d 60
+    /usr/bin/gmetric -t uint32 -n "Nginx reading" -v $reading -u "reqs_per_sec" -d 60
+    /usr/bin/gmetric -t uint32 -n "Nginx writing" -v $writing -u "reqs_per_sec" -d 60
+    /usr/bin/gmetric -t uint32 -n "Nginx waiting" -v $waiting -u "reqs_per_sec" -d 60
+    /usr/bin/gmetric -t uint32 -n "Nginx accepts" -v $((($new_accepts - $old_accepts)/$TIME)) -u "reqs_per_sec" -d 60
+    /usr/bin/gmetric -t uint32 -n "Nginx handled" -v $((($new_handled - $old_handled)/$TIME)) -u "reqs_per_sec" -d 60
+    /usr/bin/gmetric -t uint32 -n "Nginx requests" -v $((($new_requests - $old_requests)/$TIME)) -u "reqs_per_sec" -d 60
+}
+
+if [ -f $FILE ]; then
+    read_old_file
+    wget -q -O $FILE $URL 
+    read_new_file
+    send_to_gmetric
+else
+    wget -q -O $FILE $URL
+fi

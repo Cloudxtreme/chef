@@ -1,0 +1,28 @@
+localhost_log() { 
+  DATE=`date "+%Y-%m-%d"`
+  CATALINA_HOME=/usr/local/tomcat
+  NOW=`date +%s`
+
+  if [ -f $CATALINA_HOME/logs/localhost.$DATE.log ]; then
+    MODIFIED=`stat -c %Y "$CATALINA_HOME/logs/localhost.$DATE.log"`
+    DIFF=`echo "$NOW - $MODIFIED" | bc`
+
+    if [ $DIFF -lt 90 ]; then
+      WCNOW=`wc -l $CATALINA_HOME/logs/localhost.$DATE.log | sed "s@$CATALINA_HOME/logs/localhost.$DATE.log@@g"`
+      if [ ! -f /tmp/wcthen ]; then
+        echo $WCNOW > /tmp/wcthen
+      fi
+
+      WCTHEN=`cat /tmp/wcthen`
+      TAILLINES=`echo "$WCNOW - $WCTHEN" | bc`
+
+      if [ $TAILLINES -ne 0 ]; then
+        tail -n $TAILLINES $CATALINA_HOME/logs/localhost.$DATE.log > /tmp/wclog
+        if [ `cat /tmp/wclog | grep SEVERE | wc -l` -ne 0 ]; then
+          cat /tmp/wclog | mail support@example.com -s "[TOMCAT] Localhost Exception Report"
+        fi
+      fi
+      echo $WCNOW > /tmp/wcthen
+    fi
+  fi
+}

@@ -1,0 +1,6 @@
+#!/bin/sh
+if [ "$USER" != "<%= @app %>" ]; then
+  su -l <%= @user %> -c "<%= @base %>/bin/catalina.orig.sh $@"
+else
+  <%= @base %>/bin/catalina.orig.sh $@
+fi

@@ -1,0 +1,19 @@
+# apache log rotation
+
+<%= @logs %>
+/usr/local/apache2/logs/access_log
+/usr/local/apache2/logs/error_log
+/usr/local/apache2/logs/jk.log
+
+{
+  daily
+  missingok
+  rotate 60
+  compress
+  notifempty
+  sharedscripts
+  postrotate
+    /usr/local/apache2/bin/apachectl graceful > /dev/null
+  endscript
+}
+

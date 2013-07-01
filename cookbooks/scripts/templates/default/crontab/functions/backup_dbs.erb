@@ -1,0 +1,96 @@
+DATE=$(date +"%Y%m%d")
+HOSTNAME=$(hostname)
+USER=crontab
+PASS=backup
+DIR=<%= node[:scripts][:functions][:backup_dbs][:dir] %>
+LOG_DIR=/home/crontab/logs
+BACKUP_DIR=<%= node[:scripts][:functions][:backup_dbs][:backup_dir] %>
+BACKUP_HOST=backup.localdomain
+MYSQL_DIR=/usr/local/mysql
+MYSQLDUMP="$MYSQL_DIR/bin/mysqldump --single-transaction --routines --master-data -u$USER -p$PASS"
+DATABASES=( `$MYSQL_DIR/bin/mysql -u$USER -p$PASS -e "show databases" | egrep -v "^(Database|information_schema|test|performance_schema)$"` )
+TRUNCATE_DAYS=7
+
+create_dir() {
+    [ ! -d $DIR ] && mkdir -p $DIR
+    [ ! -d $LOG_DIR ] && mkdir -p $LOG_DIR
+}
+
+db_cleanup() {
+    find $DIR -name "*.sql.gpg" -mtime +$TRUNCATE_DAYS -exec /bin/rm {} \;
+    find $DIR -name "*.sql.gz.sha1sum" -mtime +$TRUNCATE_DAYS -exec /bin/rm {} \;
+}
+
+backup_dbs() {
+    create_dir
+    db_cleanup
+  
+    for database in ${DATABASES[@]}; do
+        backup_db $database $HOSTNAME.$database.$DATE.sql.gpg
+    
+        if [ $? -eq 0 ]; then
+            sha1sum_db $DIR/$HOSTNAME.$database.$DATE.sql.gpg
+	    scp_db $DIR/$HOSTNAME.$database.$DATE.sql.gpg
+	    scp_db $DIR/$HOSTNAME.$database.$DATE.sql.gpg.sha1sum
+        fi
+    done
+}
+
+sha1sum_db() {
+    [ -z "$1" ] && echo "missing param database in sha1sum_db()" && return 1
+    
+    local database=$1
+
+    if [ -f $database ]; then
+        sha1sum $database > $database.sha1sum
+	return 0
+    else
+	echo "DOES NOT EXIST $database"
+	return 1
+    fi
+}
+
+scp_db() {
+    [ -z "$1" ] && echo "missing param $database in scp_db()" && return 1
+    
+    local database=$1
+    local retval=nil
+
+    for ((j=0;j<=3;j++)); do
+	scp $database $USER@$BACKUP_HOST:$BACKUP_DIR/
+	retval=$?
+	
+	if [ "$retval" -eq 0 ]; then
+	    break
+	else
+            sleep $(($RANDOM % 120))
+	fi
+    done
+
+    if [ "$retval" -eq 0 ]; then
+	echo "SCP SUCCESS $database to $BACKUP_HOST"
+	return 0
+    else
+	echo "SCP FAILURE $database to $BACKUP_HOST"
+	return 1
+    fi
+}
+
+backup_db() {
+    [ -z "$1" ]||[ -z "$2" ] && echo "missing param database or backup file in backup_db()" && return 1
+
+    local database=$1
+    local backup_file=$2
+
+    $MYSQLDUMP $database 2> /tmp/$database.$DATE.err | gpg -e -r "Example <admin@example.com>" --trust-model always > $DIR/$backup_file
+
+    if [ -s /tmp/$database.$DATE.err ]; then
+	echo "BACKUP FAILURE $database"
+        cat /tmp/$database.$DATE.err
+	return 1
+    else
+	echo "BACKUP SUCCESS $database"
+	/bin/rm /tmp/$database.$DATE.err
+	return 0
+    fi
+}

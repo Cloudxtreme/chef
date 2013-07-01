@@ -1,0 +1,5 @@
+maintainer	"Asim, Example.com"
+maintainer_email  "asim@example.com"
+license 		"mysql"
+description 	"Installs and configures mysql"
+version 		"0.7"

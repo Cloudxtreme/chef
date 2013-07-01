@@ -1,0 +1,30 @@
+{
+  "name": "asterisk",
+  "description": "Installs/Configures asterisk",
+  "long_description": "= DESCRIPTION:\n\n= REQUIREMENTS:\n\n= ATTRIBUTES: \n\n= USAGE:\n\n",
+  "maintainer": "Asim",
+  "maintainer_email": "asim@example.com",
+  "license": "Asterisk 1.6",
+  "platforms": {
+  },
+  "dependencies": {
+    "common": ">= 0.0.0"
+  },
+  "recommendations": {
+  },
+  "suggestions": {
+  },
+  "conflicting": {
+  },
+  "providing": {
+  },
+  "replacing": {
+  },
+  "attributes": {
+  },
+  "groupings": {
+  },
+  "recipes": {
+  },
+  "version": "0.7.0"
+}

@@ -1,0 +1,7 @@
+nginx_urls_gmetric() {
+    local urls=( "example_url/one" "example_url/two" )
+
+    for url in ${urls[@]}; do
+      grep `date -d "60 seconds ago" "+%d/%b/%Y:%H:%M"` /usr/local/nginx/logs/*.log | perl /root/ganglia/gmetric/nginx_error.pl "$url"
+    done
+}

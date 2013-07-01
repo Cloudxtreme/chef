@@ -1,0 +1,136 @@
+{
+  "common": {
+    "hosts": {
+      "80.32.120.91": [ "server23" ],
+      "80.32.120.58": [ "server3" ],
+      "10.0.0.33": [ "chef.localdomain", "backup.localdomain" ],
+      "10.0.0.28": [ "dbhost",	"redis"	]
+    },
+
+    "users": {
+      "use": "list",
+      "list": {
+        "builder": 2001,
+        "crontab": 2002
+      }
+    }
+  },
+
+  "ganglia": {
+    "host": "10.0.0.33",
+    "port": "8649",
+    "name": "dc1"
+  },
+
+  "iptables": {
+    "location": "dc1",
+    "role": "app"
+  },
+
+  "logrotate": {
+    "services": { 
+      "redis": {
+	"copytruncate": true,
+        "rotate": 1,
+        "logs": [ 
+          "/usr/local/redis2/logs/redis.log"
+        ]
+      }
+    }
+  },
+
+  "monit": {
+    "mmonit": {
+      "hosts": [ "10.0.0.33:8080" ]
+    },
+    
+    "gmond": {
+      "mem": "1000.0"
+    },
+
+    "network": "10.0.0.0/24",
+    "services": {
+      "app": [
+        "gbc_health",
+        "mysql",
+        "smtpd",
+        "gmond"
+      ]
+    },
+
+    "services2": {
+      "app": {
+        "redis2": { "conn_host": "10.0.0.28", "conn_port": "6380", "template": "redis2" }
+      }
+    }
+  },
+
+  "mysql": {
+    "buffer_pool_size": "20G",
+    "server_id": 1,
+    "auto_increment_increment": 10,
+    "auto_increment_offset": 1,
+    "log_slave_updates": true,
+    "ssl_server": true,
+    "binlog_ignore_dbs": [ "mysql" ]
+  },
+
+  "ntp": {
+    "servers": [
+      "0.uk.pool.ntp.org",
+      "1.uk.pool.ntp.org",
+      "2.uk.pool.ntp.org",
+      "3.uk.pool.ntp.org"
+    ]
+  },
+
+  "postfix": {
+    "catch-all": "catch-all@example.com",
+    "inet_interfaces": "localhost"
+  },
+
+  "redis": {
+    "address": "10.0.0.28"
+  },
+
+  "scripts": {
+    "archiver": {
+      "mysql_user": "app",
+      "mysql_pass": "app",
+      "mysql_src_db": "db",
+      "mysql_src_host": "dbhost"
+    },
+
+    "functions": {
+      "users": [ "crontab" ]
+    },
+    "mysql": {
+      "pass": "examplePass"
+    }
+  },
+
+  "security": {
+    "fail2ban": {
+      "ignoreips": [ "80.1.1.1" ]
+    }
+  },
+
+  "run_list": [    
+    "recipe[common]",
+    "recipe[common::hosts]",
+    "recipe[iptables::server]",
+    "recipe[security]",
+    "recipe[ganglia]",
+    "recipe[ntp]",
+    "recipe[timezone]",
+    "recipe[postfix]",
+    "recipe[mysql::percona_server]",
+    "recipe[mysql::ssl]",
+    "recipe[redis]",
+    "recipe[monit::app]",
+    "recipe[logrotate]",
+    "recipe[scripts::func]",
+    "recipe[cron::gmetric_mysql_stats]",
+    "recipe[cron::gmetric_tcp_connections]"
+  ]
+}

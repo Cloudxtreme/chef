@@ -1,0 +1,24 @@
+#!/bin/bash
+
+SIP=$1
+FILE=/usr/local/asterisk/etc/asterisk/voicemail.conf
+
+function get_vkey {
+    VKEY=`cat $FILE | grep "^$SIP" | awk '{print $3}' | awk 'BEGIN {FS=","} {print $1}'`
+}
+
+function email_vkey {
+    EMAIL=`cat $FILE | grep "^$SIP" | awk 'BEGIN {FS=","} {print $3}'`
+
+   /usr/sbin/sendmail -f"admin@example.com" $EMAIL <<EOF
+Subject: Voicemail Password
+To: $EMAIL
+Your voicemail password is $VKEY
+EOF
+}
+
+get_vkey
+
+if [ ! -z VKEY ];then
+    email_vkey
+fi

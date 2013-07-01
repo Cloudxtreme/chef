@@ -1,0 +1,8 @@
+SET_RUBY=true
+
+for dir in ${PATH//:/ }; do 
+    [ "$dir" == "/usr/local/ruby/bin" ] && SET_RUBY=false
+done
+
+[ "$SET_RUBY" == "true" ] && export PATH=/usr/local/ruby/bin:$PATH
+

@@ -1,0 +1,5 @@
+maintainer	"Asim, Example.com"
+maintainer_email  "asim@example.com"
+license 		"imagemagick"
+description 	"Installs and configures imagemagick"
+version 		"0.7"

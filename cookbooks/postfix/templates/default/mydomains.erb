@@ -1,0 +1,10 @@
+# mydomains - include a a list of aliases for your machine here, formated:
+# example.com                   OK
+# After change, run "postmap /etc/postfix/mydomains"
+localhost                       OK
+localhost.localdomain		OK
+<%= node[:postfix][:hostname] %>        OK
+
+<% node[:postfix][:mydomains].each do |domain| -%>
+<%= domain %>		OK
+<% end -%>

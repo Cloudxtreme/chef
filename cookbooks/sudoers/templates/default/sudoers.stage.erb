@@ -1,0 +1,8 @@
+%builder ALL = NOPASSWD: /bin/su - builder
+%builder ALL = NOPASSWD: /bin/su - tomcat
+builder ALL = NOPASSWD: /etc/init.d/tomcat
+builder ALL = NOPASSWD: /etc/init.d/monit
+builder ALL = NOPASSWD: /etc/init.d/solr
+builder ALL = NOPASSWD: /etc/init.d/imq
+builder ALL = NOPASSWD: /etc/init.d/unicorn
+builder ALL = NOPASSWD: /etc/init.d/apachectl

@@ -1,0 +1,10 @@
+default[:keepalived][:version] = "1.1.19"
+default[:keepalived][:ipvsadm_version] = "1.24"
+default[:keepalived][:hostname] = `hostname`.chomp
+default[:keepalived][:hosts] = {}
+default[:keepalived][:groups] = []
+default[:keepalived][:interface] = "eth0"
+default[:keepalived][:instances] = keepalived[:groups].map { |group| keepalived[group] }
+default[:keepalived][:virtual_ips] = keepalived[:instances].map { |instance| instance[:virtual_ips] }.flatten
+default[:keepalived][:set_virtualhost] = false
+default[:keepalived][:id] = "KP"

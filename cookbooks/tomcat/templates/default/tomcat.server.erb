@@ -1,0 +1,66 @@
+#!/bin/bash
+#
+# <%= @app %>
+#
+# chkconfig: 345 <%= @runlevels %>
+# description: 	Start up the <%= @app.capitalize %> servlet engine.
+
+# Source function library.
+
+LOCKDIR=/var/lock
+RETVAL=0
+JAVA_HOME=/usr/local/java
+CATALINA_HOME=/usr/local/<%= @app %>
+CATALINA_BASE=/usr/local/<%= @app %>
+CATALINA_PID=$CATALINA_HOME/conf/catalina.pid
+<% if @solr_home %>
+  SOLR_HOME=<%= @solr_home %>
+<% end %>
+PATH=$JAVA_HOME/bin:/usr/local/mysql/bin:/usr/local/ant/bin:$PATH
+
+[ -f /etc/init.d/functions ] && . /etc/init.d/functions
+[ -d /var/lock/subsys ] && LOCKDIR=/var/lock/subsys
+  
+start()
+{
+        if [ -f $CATALINA_HOME/bin/catalina.sh ];
+          then
+           su <%= @user %> -c "$CATALINA_HOME/bin/catalina.sh start"
+           echo -n $"Starting <%= @app.capitalize %>"
+	   RETVAL=$?
+           [ $RETVAL -eq 0 ] && touch $LOCKDIR/<%= @app %>.server && success
+	   echo
+	   return $RETVAL
+        fi
+}
+
+stop()
+{
+           echo -n $"Shutting Down <%= @app.capitalize %>"
+           su <%= @user %> -c "pkill -9 java"
+           RETVAL=$?
+           [ $RETVAL -eq 0 ] && rm -f $LOCKDIR/<%= @app %>.server && success
+	   echo
+	   return $RETVAL
+}
+
+case "$1" in
+ start)
+	start
+	;;
+ stop)
+	stop
+ 	;;
+ restart)
+	stop
+	sleep 2
+	start
+	;;
+ *)
+ 	echo $"Usage: $0 {start|stop|restart}"
+	exit 1
+	;;
+esac
+
+exit $RETVAL
+

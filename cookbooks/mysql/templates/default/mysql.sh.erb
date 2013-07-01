@@ -1,0 +1,7 @@
+SET_MYSQL=true
+
+for dir in ${PATH//:/ }; do 
+    [ "$dir" == "/usr/local/mysql/bin" ] && SET_MYSQL=false
+done
+
+[ "$SET_MYSQL" == "true" ] && export PATH=/usr/local/mysql/bin:$PATH

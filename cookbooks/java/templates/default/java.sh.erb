@@ -1,0 +1,9 @@
+export JAVA_HOME=/usr/local/java
+
+SET_JAVA=true
+
+for dir in ${PATH//:/ }; do
+    [ "$dir" == "$JAVA_HOME/bin" ] && SET_JAVA=false
+done
+
+[ "$SET_JAVA" == "true" ] && export PATH=$JAVA_HOME/bin:$PATH

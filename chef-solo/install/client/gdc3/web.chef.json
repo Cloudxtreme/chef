@@ -1,0 +1,215 @@
+{
+  "common": { 
+    "hosts": {
+      "10.0.1.201": [ "chef.localdomain" ],
+      "10.0.1.101": [ "dbhost", "redis" ]
+    },
+
+    "users": {
+      "manage_home": true,
+      "use": "list",
+      "list": {
+        "builder": 2001
+      }
+    }   
+  },
+
+  "fluent": {
+    "sources": {
+      "gdc3.example.com": {
+        "tag_append_host": true,
+        "params": {
+          "type": "tail",
+          "path": "/usr/local/nginx/logs/gdc3.example.com.log",
+          "tag": "nginx.gdc3",
+          "format": "/^(?<request>.*)$/"
+        }
+      },
+      "access_log": {
+        "tag_append_host": true,
+        "params": {
+          "type": "tail",
+          "path": "/usr/local/nginx/logs/access.log",
+          "tag": "nginx.access",
+          "format": "/^(?<request>.*)$/"
+        }
+      },
+      "error_log": {
+        "tag_append_host": true,
+        "params": {
+          "type": "tail",
+          "path": "/usr/local/nginx/logs/error.log",
+          "tag": "nginx.error",
+          "format": "/^(?<request>.*)$/"
+        }
+      }
+    },
+    "matches": {
+      "nginx.**": {
+        "type": "forward"
+      }
+    },
+    "servers": {
+      "admin": {
+        "name": "admin",
+        "host": "10.0.1.201"     
+      }
+    }
+  },
+
+  "logrotate": {
+    "services": { 
+      "app": {
+        "rotate": 1,
+        "logs": [ 
+	  "/rails/app/log/production.log"
+ 	],
+        "postrotate": [ 
+	  "/etc/init.d/unicorn1.9 logrotate app"
+	] 
+      },
+      "nginx": {
+        "rotate": 1,
+        "logs": [
+	  "/usr/local/nginx/logs/*.log"
+	],
+        "postrotate": [
+	  "kill -USR1 `cat /usr/local/nginx/logs/nginx.pid`"
+	]
+      }
+    }
+  },
+
+  "postfix": {
+    "catch-all": "catch-all@example.com",
+    "inet_interfaces": "localhost",
+    "sender_dependent_relayhost_map": [ "noreply@example.com smtp-relay.example.com" ]
+  },
+
+  "monit": {
+    "actions": [
+      "enable",
+      "start"
+    ],
+    "nginx": { 
+      "host": "127.0.0.1",
+      "port": "82",
+      "checks": "protocol http and request '/nginx_status'"
+    },
+
+    "mmonit": {
+      "hosts": [ "10.0.1.201:8080" ]
+    },
+
+    "gmond": {
+      "mem": "350.0",
+      "host": "127.0.0.1"
+    },
+
+    "network": "10.0.1.0/24",
+
+    "services": {
+      "urls": {
+       	      "app": "/health-check"
+      },
+
+      "web": [
+        "anthill",
+        "fluentd",
+	"nginx",
+	"smtpd",
+        "gmond"
+      ]
+    }
+  },
+
+  "ganglia": {
+    "host": "10.0.1.201",
+    "port": "8649",
+    "name": "gdc3"
+  },
+
+  "iptables": {
+    "location": "gdc3",
+    "role": "web",
+    "overwrite": true
+  },
+
+  "nginx": {
+    "actions": [ "enable", "start" ],
+    "install_modules": [ 
+      "http_stub_status_module", 
+      "http_ssl_module",
+      "http_realip_module"
+    ],
+    "listeners": [ "127.0.0.2:8080" ],
+    "vhost": {
+      "templates": [ "gdc3.example.com", "localhost" ],
+      "ssl_domain": "gdc3.example.com"
+    }
+  },
+
+  "ntp": {
+    "servers": [
+      "0.uk.pool.ntp.org",
+      "1.uk.pool.ntp.org",
+      "2.uk.pool.ntp.org",
+      "3.uk.pool.ntp.org"
+    ]
+  },
+
+  "rails": {
+    "app": {
+      "log_dir": "/mnt/drive/app",
+      "link_log_dir": "/var/log/app"
+    },
+    "tarball_host": "https://chef.example.com/archive",
+    "unicorn": {
+      "app": {
+        "start": true,
+	"environment_variables": {
+	  "GDC_PLATFORM": 1
+	}
+      }
+    }
+  },
+
+  "scripts": {
+    "functions": {
+      "root": [
+        "worker",
+        "nginx_gmetric",
+        "nginx_urls_gmetric"
+      ]
+    }
+  },
+
+  "run_list": [    
+    "recipe[common]",
+    "recipe[common::hosts]",
+    "recipe[common::libxml2]",
+    "recipe[common::7zip]",
+    "recipe[iptables::server]",
+    "recipe[security::chkrootkit]",
+    "recipe[security::fail2ban]",
+    "recipe[sudoers::web]",
+    "recipe[ntp]",
+    "recipe[timezone]",
+    "recipe[postfix]",
+    "recipe[ganglia]",
+    "recipe[mysql::percona_client]",
+    "recipe[nginx::server]",
+    "recipe[rvm::ruby19]",
+    "recipe[ruby]",
+    "recipe[logrotate]",
+    "recipe[scripts]",
+    "recipe[fluentd]",
+    "recipe[monit::web]",
+    "recipe[cron::worker]",
+    "recipe[cron::gmetric_nginx]",
+    "recipe[cron::gmetric_nginx_status]",
+    "recipe[cron::gmetric_nginx_urls]",
+    "recipe[cron::gmetric_tcp_connections]",
+    "recipe[anthill::agent]"
+  ]
+}

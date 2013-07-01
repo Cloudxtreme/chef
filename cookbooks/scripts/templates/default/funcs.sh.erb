@@ -1,0 +1,55 @@
+#!/bin/bash
+
+command=$1
+
+sysdir=$(readlink -f `dirname $0`)
+scriptdir=$sysdir/functions
+scriptrunner=$(whoami)
+
+usage() {
+  echo -e "usage: $0 [function]\n" 
+
+  if [ $(ls $scriptdir|wc -l) -eq 0 ]; then
+      echo "no functions available"
+  else
+      echo "list of functions:"
+      for script in $(ls $scriptdir); do 
+	  echo -e "\t$script"
+      done
+  fi
+}
+
+source_function() {
+  local script=$1
+
+  # if the script does not exist then echo usage and exit
+  if ! [ -f "$scriptdir/$script" ]; then
+      echo "error: cannot find function" && usage
+      exit 1
+  fi
+  
+  # if its not owned by the same user executing this script then exit
+  if [ "$scriptrunner" != $(stat -c %U "$scriptdir/$script") ]; then
+      echo "error: $scriptdir/script is not owned by"
+      exit 1
+  fi
+
+  source "$scriptdir/$script"
+}
+
+# check script dir exists and command validity
+if ! [ -d "$scriptdir" ]; then
+    echo "error: $scriptdir does not exist"
+    exit 1
+fi
+
+if ! [[ $command =~ ^[a-zA-Z0-9_-]+$ ]]; then
+    usage 
+    exit 1
+fi
+
+# source the script and execute
+source_function $command
+$command
+
+exit $?

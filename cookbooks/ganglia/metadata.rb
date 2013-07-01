@@ -1,0 +1,5 @@
+maintainer	"Asim, Example.com"
+maintainer_email  "asim@example.com"
+license 		"ganglia"
+description 	"Installs and configures ganglia"
+version 		"0.7"

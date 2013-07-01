@@ -1,0 +1,32 @@
+global
+	log 127.0.0.1	local0
+	chroot /usr/local/haproxy/chroot
+	pidfile /usr/local/haproxy/etc/haproxy.pid
+        user nobody
+        group nobody
+	daemon
+	nbproc 1
+	quiet
+	maxconn 4096
+	
+defaults
+        log     global
+        mode    tcp
+        option  tcplog
+        option  dontlognull
+        #option logasap
+        retries 3
+        redispatch
+        #maxconn        2000
+        contimeout      15000
+        clitimeout      50000
+        srvtimeout      50000
+
+listen  admin :9090
+        mode http
+        balance roundrobin
+        option httpclose
+        stats enable
+        stats uri /haproxy
+        stats auth admin:password
+

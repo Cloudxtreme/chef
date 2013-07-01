@@ -1,0 +1,11 @@
+--- include/ap_release.h	2011-05-20 17:54:17.000000000 +0100
++++ include/ap_release_mod.h	2011-06-07 15:20:18.000000000 +0100
+@@ -41,7 +41,7 @@
+  */
+ #define AP_SERVER_BASEVENDOR "Apache Software Foundation"
+ #define AP_SERVER_BASEPROJECT "Apache HTTP Server"
+-#define AP_SERVER_BASEPRODUCT "Apache"
++#define AP_SERVER_BASEPRODUCT "web server 0.1"
+ 
+ #define AP_SERVER_MAJORVERSION_NUMBER 2
+ #define AP_SERVER_MINORVERSION_NUMBER 2

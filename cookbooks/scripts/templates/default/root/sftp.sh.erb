@@ -1,0 +1,343 @@
+#!/bin/bash
+
+# dirs for upload files
+OKDIR=~/.uploads/complete
+ERRDIR=~/.uploads/error
+LOGDIR=~/.uploads/logs
+KEYDIR=~/.uploads/keys
+GPGDIR=~/.uploads/gpg
+
+for dir in $LOGDIR $OKDIR $ERRDIR $KEYDIR $GPGDIR; do
+    [ ! -d $dir ] && mkdir -m 700 -p $dir
+done
+
+# upload file settings
+UFILEDIR=/data/uploads
+UFILELOCALDIR=/data
+UFILEMATCH="upload_*"
+
+[ ! -d $UFILEDIR ] && mkdir -p $UFILEDIR && chmod 777 $UFILEDIR
+
+# sftp settings
+IDFILE=$KEYDIR/example.key
+SERVER=stfp.example.com 
+USER=backups
+PORT=9999
+
+# gpg settings
+HOMEDIR=$GPGDIR
+RECIPIENT="Example <admin@example.com>"
+
+# log settings
+LOGSTDOUT=false
+
+# pid file
+PIDFILE=/var/run/usftp.pid
+
+check_keys() {
+    # check for keys
+    [ ! -f $IDFILE ] && echo "error: cannot find sftp id file $IDFILE" && exit 1
+    [ ! -f $HOMEDIR/pubring.gpg ] && echo "error: cannot find gpg public key $HOMEDIR/pubring.gpg" && exit 1
+}
+
+control_c() {
+    log "received interrupt...exiting"
+    [ -f $PIDFILE ] && /bin/rm $PIDFILE
+    exit
+}
+
+encrypt_file() {
+    [ -z "$1" ] && return 1
+
+    local input_file=$1
+    local output_file=$1.gpg
+
+    [ ! -f "$input_file" ] && log "error: input file $input_file does not exist" && return 1
+    [ -f "$output_file" ] && log "error: output file $output_file already exists" && return 1
+
+    gpg --homedir $HOMEDIR -e -o "$output_file" -r "$RECIPIENT" --trust-model always "$input_file"
+
+    if [ $? -ne 0 ]; then
+	log "error: $input_file encryption failed"
+	return 1
+    else
+	log "$input_file encrypted"
+	return 0
+    fi 
+}
+
+log() {
+    [ -z "$1" ] && return 1
+    
+    local time=$(date -u +"%Y-%m-%d %H:%M:%S")
+    if [ "$LOGSTDOUT" == "true" ]; then
+	echo "[$time] - $1" | tee -a $LOGFILE
+    else
+	echo "[$time] - $1" >> $LOGFILE
+    fi
+}
+
+sha1_file() {
+    [ -z "$1" ] && return 1
+
+    local local_file=$1
+
+    [ ! -f "$local_file" ] && log "error: local file $local_file does not exist" && return 1
+    
+    sha1sum "$1" > "$1".sha1sum
+}
+
+set_log() {
+    # update the date and logfile
+    [ "$1" ] && prefix=$1
+
+    DATE=$(date +"%Y%m%d")
+    LOGFILE=$LOGDIR/${prefix}sftp.$DATE.log
+}
+
+start_process() {
+    [ -f $PIDFILE ] && PID=$(cat $PIDFILE)
+    
+    if [ -n "$PID" ] && [ -d "/proc/$PID" ]; then
+	echo "an sftp process is already running... exiting"
+	exit 1
+    else
+	echo $$ > $PIDFILE
+
+	log "starting upload service"
+	log "monitoring $UFILEDIR for files matching $UFILEMATCH"	
+    fi
+}
+
+transfer_file() {
+    local local_file=$1
+    local remote_file=$2
+    local status=false
+    
+    # if params are null or the file does not exist then return
+    if [ -z "$local_file" ]||[ -z "$remote_file" ]||[ ! -f "$local_file" ]; then
+	log "error: params supplied to transfer_file are null or local file does not exist"
+	return 1
+    fi
+
+    local remote_path=$(dirname "$remote_file")
+
+    for ((j=0;j<3;j++)); do
+	lftp -p $PORT -u $USER,placeholder -e "set sftp:connect-program ssh -ax -oIdentityFile=$IDFILE; put \"$local_file\" -o \"$remote_file\"; bye"  sftp://$SERVER:$PORT >/dev/null
+
+#        echo "put \"$local_file\" \"$remote_file\"" | sftp -oPort=$PORT -oIdentityFile=$IDFILE $USER@$SERVER
+        if [ $? -eq 0 ]; then
+	    status=true
+	    break
+        else
+	    status=false
+	fi
+    done
+
+    if [ "$status" == "true" ]; then
+	log "transfer ok $local_file"
+	return 0
+    else
+	log "error: transfer failed $local_file"
+	return 1
+    fi
+}
+
+workon_file() {
+    [ -z "$1" ] && return 1
+
+    local upload_file=$1
+    local upload_status=0
+    local upload_line=0
+
+    # set the logfile to use
+    set_log
+
+    if [ $(stat -c %s "$upload_file") -eq 0 ]; then
+	log "$upload_file is of size...removing"
+	/bin/rm "$upload_file" && return
+    fi
+
+    log "working on $upload_file"
+
+    # loop each line of the upload file and set params
+    while read lfile rfile encrypt; do
+	local upload=true
+
+	let upload_line+=1 
+
+	log "working on $upload_file:$upload_line"
+
+        # check the param is not null and file exists
+	if [ -z "$lfile" ]; then 
+	    upload=false && log "error: no local file parameter for $upload_file:$upload_line"
+	elif ! $(echo "$lfile"|egrep -q '^/data/'); then
+	    upload=false && log "error: local file path must start with /data for $upload_file:$upload_line"
+	elif $(echo "$lfile"|egrep -q '/../'); then
+	    upload=false && log "error: local file path must not contain /../ for $upload_file:$upload_line"
+	elif [ ! -f "$lfile" ]; then
+	    upload=false && log "error: local file does not exist for $upload_file:$upload_line"
+	fi    
+    
+        # check the param is not null
+	if [ -z "$rfile" ]; then
+	    upload=false && log "error: no remote file parameter for $upload_file:$upload_line"
+	elif $(echo "$rfile"|egrep -q '/$'); then
+	    upload=false && log "error: remote file must not end with / for $upload_file:$upload_line"
+	fi
+
+        # if upload was not set to false do some work
+	if [ "$upload" == "true" ]; then    
+	    local upload_lfile=$lfile
+	    local upload_rfile=$rfile
+
+    	    # encrypt the file if the param exists
+	    if [ -n "$encrypt" ]; then
+		encrypt_file "$lfile"
+		local estatus=$?
+
+		upload_lfile=$lfile.gpg
+		upload_rfile=$rfile.gpg
+	    fi
+
+            # upload the file 
+	    log "uploading $upload_lfile to $SERVER:$upload_rfile $encrypt in $upload_file:$upload_line"
+	    transfer_file "$upload_lfile" "$upload_rfile"
+	    local status=$?
+	else
+	    log "error: not uploading upload_status set to false"
+	    local status=1
+	fi
+
+	if [ "$status" -eq 0 ]; then
+	    log "completed upload for $lfile in $upload_file:$upload_line"
+	else
+	    log "error: there was a problem uploading $lfile in $upload_file:$upload_line"
+	    upload_status=1
+	fi
+	
+	# unset params from upload file
+	unset rfile lfile encrypt status
+    done < "$upload_file"
+
+    local ufile=$(basename "$upload_file").$(date +"%s")
+
+    if [ "$upload_status" -eq 0 ]; then
+	# move upload file to success dir
+	log "moving $upload_file to $OKDIR/$ufile"
+	mv "$upload_file" "$OKDIR/$ufile"
+	return 0
+    else
+        # move upload file to error dir
+	log "moving $upload_file to $ERRDIR/$ufile"
+	mv "$upload_file" "$ERRDIR/$ufile"
+	return 1
+    fi
+}
+
+workon_single_file() {
+    if [ -z "$1" ]||[ -z "$2" ]; then
+        log "error: missing params in workon_single_file()"
+        return 1
+    fi
+
+    local lfile=$1
+    local rfile=$2
+
+#    encrypt_file "$lfile"
+#    local estatus=$?
+
+#    if [ "$estatus" -ne 0 ]; then
+#	log "error: encryption failed for $lfile"
+#	return 1
+#    fi
+
+    local upload_lfile=$lfile
+    local upload_rfile=$rfile
+    
+    # upload the file
+    log "uploading $upload_lfile to $SERVER:$upload_rfile"
+    transfer_file "$upload_lfile" "$upload_rfile"
+    local status=$?
+    
+    if [ "$status" -eq 0 ]; then
+	log "completed upload for $lfile"
+    else
+	log "error: there was a problem uploading $lfile"
+    fi
+
+#    sha1_file "$upload_lfile"
+#    if [ "$?" -eq 0 ]; then
+#	transfer_file "$upload_lfile.sha1sum" "$upload_rfile.sha1sum"
+#    else
+#	log "error: sha1sum of $upload_lfile failed"
+#    fi
+    
+#    if [ -f "$upload_lfile" ]; then
+#	/bin/rm -f "$upload_lfile"
+#    fi
+    
+#    if [ -f "$upload_lfile.sha1sum" ]; then
+#	/bin/rm -f "$upload_lfile.sha1sum"
+#    fi
+    
+    return "$status"
+}
+
+usage() {
+    echo "usage: $0 [local-file remote-file]"
+}
+
+main() {
+    trap control_c SIGINT
+
+    set_log
+    check_keys 
+    start_process
+
+    while true; do 
+	# check if there are upload files
+	local UPLOADS=$(ls $UFILEDIR/$UFILEMATCH 2> /dev/null|wc -l)
+	
+	# if there are no uploads sleep and skip this iteration
+	[ "$UPLOADS" -eq 0 ] && sleep 60 && continue
+
+	log "found $UPLOADS upload file(s)"
+
+	# require a fix for filenames with spaces
+	# for each upload file do some work
+	for upload_file in $(ls -t $UFILEDIR/$UFILEMATCH 2> /dev/null); do
+	    workon_file "$upload_file"
+	done
+
+	sleep 30
+    done
+}
+
+s_main() {
+    [ -z "$1" ]||[ -z "$2" ] && usage && exit 1
+
+    set_log "cl."
+    check_keys
+
+    workon_single_file "$1" "$2"
+}
+
+# if no params are provided then run the main loop and process based on $UFILEDIR/$UFILEMATCH
+if [ -z "$1" ]; then 
+    main
+    exit $?
+fi
+
+if [ -z "$2" ]; then
+    usage
+    exit 1
+fi
+
+# process file given on command line
+if [ ! -f "$1" ]; then
+    echo "file $1 does not exist"
+    exit 1
+fi
+
+s_main "$1" "$2"

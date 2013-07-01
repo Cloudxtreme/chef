@@ -1,0 +1,51 @@
+gzip_binlogs() {
+    local BIN_LOG_LIST=/home/crontab/scripts/bin_log_list.log
+    local BIN_LOG_DIR=/home/crontab/logs
+    local hostname=$(hostname -s)
+    local backup_host=<%= node[:scripts][:backup_host] %>
+
+    # log list
+    find /usr/local/mysql/data/ -maxdepth 1 -mmin +1440 -type f -not -name "*.gz" -name "$hostname-bin.0*" > $BIN_LOG_LIST
+
+    # gzip
+    for log in `cat $BIN_LOG_LIST`; do
+        LOG=`basename $log`
+        GPGLOG="$BIN_LOG_DIR/$LOG.gpg"
+
+        if [ -f $GPGLOG ]; then
+            echo "EXISTS $GPGLOG"
+        else
+	    gpg -e -r "Example <admin@example.com>" --trust-model always -o - $log > $GPGLOG
+
+	    if [ $? -eq 0 ]; then
+		local retval=nil
+
+		sha1sum $GPGLOG > $GPGLOG.sha1sum
+
+		for ((j=0;j<=3;j++)); do
+                    scp $GPGLOG $GPGLOG.sha1sum crontab@$backup_host:/data/bin_logs/
+		    retval=$?
+		    if [ "$retval" -eq 0 ]; then
+			break
+		    else
+	                sleep $(($RANDOM % 120))
+		    fi
+		done
+
+		if [ "$retval" -eq 0 ]; then	
+		    echo "SCP SUCCESS $LOG"
+		else
+		    echo "SCP FAILED $LOG"
+		fi
+
+                sleep $(($RANDOM % 120))
+	    else
+		echo "GPG ENCRYPTION FAILED for $LOG"
+	    fi
+        fi
+    done
+
+    # cleanup
+    find $BIN_LOG_DIR -maxdepth 1 -mtime +2 -type f -name "$hostname-bin.0*\.g*" -exec /bin/rm {} \;
+}
+

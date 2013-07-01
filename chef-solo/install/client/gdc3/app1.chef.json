@@ -1,0 +1,140 @@
+{
+  "common": {
+    "hosts": {
+      "10.0.1.201": [ "chef.localdomain", "backup.localdomain" ],
+      "10.0.1.101": [ "dbhost", "redis" ]
+    },
+
+    "users": {
+      "manage_home": true,
+      "use": "list",
+      "list": {
+        "builder": 2001,
+        "crontab": 2002
+      }
+    }
+  },
+
+  "ganglia": {
+    "host": "10.0.1.201",
+    "port": "8649",
+    "name": "gdc3"
+  },
+
+  "iptables": {
+    "location": "gdc3",
+    "role": "app1",
+    "overwrite": true
+  },
+
+  "logrotate": {
+    "services": { 
+      "redis": {
+	"copytruncate": true,
+        "rotate": 1,
+        "logs": [ 
+          "/usr/local/redis2/logs/redis.log"
+        ]
+      }
+    }
+  },
+
+  "monit": {
+    "actions": [
+      "enable",
+      "start"
+    ],
+    "mmonit": {
+      "hosts": [ "10.0.1.201:8080" ]
+    },
+
+    "gmond": {
+      "mem": "750.0",
+      "host": "127.0.0.1"
+    },
+
+    "network": "10.0.1.0/24",
+    "services": {
+      "app": [
+        "gdc3_health",
+        "mysql",
+        "smtpd",
+	"gmond"
+      ]
+    },
+
+    "services2": {
+      "app": {
+        "redis2": { "conn_host": "10.0.1.101", "conn_port": "6380", "template": "redis2" }
+      }
+    }
+  },
+
+  "mysql": {
+    "buffer_pool_size": "8G",
+    "server_id": 2,
+    "template": "app",
+    "install_dir": "/mnt/drive",
+    "auto_increment_increment": 10,
+    "auto_increment_offset": 2,
+    "log_slave_updates": true,
+    "ssl_server": true,
+    "binlog_ignore_dbs": [ "mysql" ]
+  },
+
+  "ntp": {
+    "servers": [
+      "0.uk.pool.ntp.org",
+      "1.uk.pool.ntp.org",
+      "2.uk.pool.ntp.org",
+      "3.uk.pool.ntp.org"
+    ]
+  },
+
+  "postfix": {
+    "catch-all": "catch-all@example.com",
+    "inet_interfaces": "localhost"
+  },
+
+  "redis": {
+    "address": "10.0.1.101",
+    "install_dir": "/mnt/drive"
+  },
+
+  "scripts": {
+    "archiver": {
+      "mysql_user": "app",
+      "mysql_pass": "app",
+      "mysql_src_db": "db",
+      "mysql_src_host": "dbhost"
+    },
+
+    "functions": {
+      "backup_dbs": {
+        "dir": "/mnt/drive/database-backups",
+        "backup_dir": "/mnt/drive/database-backups"
+      },
+      "users": [ "crontab" ]
+    }
+  },
+
+  "run_list": [    
+    "recipe[common]",
+    "recipe[common::hosts]",
+    "recipe[iptables::server]",
+    "recipe[security::chkrootkit]",
+    "recipe[security::fail2ban]",
+    "recipe[ganglia]",
+    "recipe[ntp]",
+    "recipe[timezone]",
+    "recipe[postfix]",
+    "recipe[mysql::percona_server]",
+    "recipe[mysql::ssl]",
+    "recipe[redis]",
+    "recipe[logrotate]",
+    "recipe[monit::app]",
+    "recipe[scripts::func]",
+    "recipe[cron::gmetric_mysql_stats]",
+    "recipe[cron::gmetric_tcp_connections]"
+  ]
+}

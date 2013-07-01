@@ -1,0 +1,59 @@
+#!/bin/sh
+#
+# Startup script for the Knockd daemon
+#
+# processname: knockd
+# pidfile: /var/run/knockd.pid
+# config: /etc/knockd.conf
+# chkconfig: 345 22 78
+# description: Start and stop Knockd
+
+# Global definitions
+PID_FILE="/var/run/knockd.pid"
+KNOCKD=/usr/local/knockd/sbin/knockd
+CONFIG=/etc/knockd.conf
+
+# source function library
+. /etc/init.d/functions
+
+RETVAL=0
+
+start() {
+	echo -n "Starting Knockd: "
+	$KNOCKD -c $CONFIG -d
+	RETVAL=$?
+        echo
+        [ $RETVAL -eq 0 ] && touch /var/lock/subsys/knockd
+        return $RETVAL
+}
+
+stop() {
+	echo -n "Shutting down Knocked: "
+	killproc knockd
+	RETVAL=0
+        echo
+        [ $RETVAL -eq 0 ] && /bin/rm -f /var/lock/subsys/knockd
+        return $RETVAL
+}
+
+# See how we were called.
+case "$1" in
+  start)
+        start
+        ;;
+  stop)
+        stop
+        ;;
+  restart)
+        stop
+        start
+        ;;
+  condrestart)
+        [ -f /var/lock/subsys/knockd ] && $0 restart || :
+        ;;
+  *)
+	echo "Usage: $0 {start|stop|restart|condrestart}"
+	exit 1
+esac
+
+exit 0

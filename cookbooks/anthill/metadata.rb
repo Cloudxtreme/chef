@@ -1,0 +1,5 @@
+maintainer		"Asim, Example.com"
+maintainer_email  	"asim@example.com"
+license 		"anthill"
+description 		"Installs and configures anthill"
+version 		"0.7"

@@ -1,0 +1,56 @@
+#!/bin/bash
+
+# chkconfig: 345 60 30
+# description: Lighttpd
+# Source function library.
+. /etc/init.d/functions
+
+RETVAL=0
+
+function hastart {
+	echo -n $"Starting HAProxy"
+	/usr/local/haproxy/sbin/haproxy -f /usr/local/haproxy/etc/haproxy.cfg
+        RETVAL=$?
+        [ $RETVAL -eq 0 ] && success
+        echo
+        return $RETVAL
+
+}
+
+function hastop {
+	echo -n $"Stopping HAProxy"
+	kill `cat /usr/local/haproxy/etc/haproxy.pid`
+	RETVAL=$?
+        [ $RETVAL -eq 0 ] && success
+        echo
+        return $RETVAL
+
+}
+
+function harestart {
+	hastop
+	hastart
+}
+
+case $1 in
+start)
+        cd /usr/local/haproxy
+        hastart
+        ;;
+stop)
+        cd /usr/local/haproxy
+        hastop
+        ;;
+restart)
+        cd /usr/local/haproxy
+        hastop
+	hastart
+        ;;
+*)
+
+        echo $"Usage: $0 {start|stop|restart}"
+        exit 1
+        ;;
+
+esac
+

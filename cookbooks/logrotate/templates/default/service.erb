@@ -1,0 +1,24 @@
+# <%= @service %> log rotation
+
+<% node[:logrotate][:services][:"#{@service}"][:logs].each do |log| -%>
+<%= log %>
+<% end -%>
+
+{
+    daily
+    missingok
+    compress
+    notifempty
+    rotate <%= node[:logrotate][:services][:"#{@service}"][:rotate] %>
+    <% if node[:logrotate][:services][:"#{@service}"][:copytruncate] -%>
+    copytruncate
+    <% end -%>
+    <% if node[:logrotate][:services][:"#{@service}"][:postrotate] -%>
+    sharedscripts
+    postrotate
+    <% node[:logrotate][:services][:"#{@service}"][:postrotate].each do |command| -%>
+      <%= command %>
+    <% end -%>
+    endscript
+    <% end -%>
+}

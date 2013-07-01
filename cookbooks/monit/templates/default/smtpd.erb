@@ -1,0 +1,5 @@
+check process smtpd with pidfile /var/spool/postfix/pid/master.pid
+	group servers
+  	start program "/etc/init.d/postfix start"
+  	stop program "/etc/init.d/postfix stop"
+  	if failed host 127.0.0.1 port 25 protocol smtp then restart

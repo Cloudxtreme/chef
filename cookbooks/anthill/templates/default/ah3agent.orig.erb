@@ -1,0 +1,113 @@
+#!/bin/sh
+
+# == BEGIN INSTALL MODIFICATIONS ===============================================
+
+AGENT_HOME="/usr/local/anthill3/<%= node[:anthill][:hostname] %>"
+JAVA_DEBUG_OPTS="-Xdebug -Xrunjdwp:transport=dt_socket,address=localhost:10001,server=y,suspend=n -Dcom.sun.management.jmxremote"
+JAVA_HOME="/usr/local/java"
+PATH=$PATH:$AGENT_HOME/bin
+
+# == END INSTALL MODIFICATIONS =================================================
+
+# This only affects the monitor and should not need to be changed.
+# The worker heap is set in bin/worker-args.conf.
+MONITOR_JAVA_OPTS="-Xmx64m"
+
+ANT_HOME="$AGENT_HOME/opt/apache-ant-1.7.1"
+GROOVY_HOME="$AGENT_HOME/opt/groovy-1.7.4"
+JAVACMD="$JAVA_HOME/bin/java"
+
+export AGENT_HOME JAVA_HOME ANT_HOME GROOVY_HOME PATH
+
+# OS specific support.  $var _must_ be set to either true or false.
+cygwin=false
+os400=false
+case "`uname`" in
+CYGWIN*) cygwin=true;;
+OS400*) os400=true;;
+esac
+
+# For Cygwin, ensure paths are in UNIX format before anything is touched
+if $cygwin; then
+  [ -n "$JAVA_HOME" ] && JAVA_HOME=`cygpath --unix "$JAVA_HOME"`
+  [ -n "$AGENT_HOME" ] && AGENT_HOME=`cygpath --unix "$AGENT_HOME"`
+  [ -n "$CLASSPATH" ] && CLASSPATH=`cygpath --path --unix "$CLASSPATH"`
+fi
+
+# For OS400
+if $os400; then
+  # Set job priority to standard for interactive (interactive - 6) by using
+  # the interactive priority - 6, the helper threads that respond to requests
+  # will be running at the same priority as interactive jobs.
+  COMMAND='chgjob job('$JOBNAME') runpty(6)'
+  system $COMMAND
+
+  # Enable multi threading
+  export QIBM_MULTI_THREADED=Y
+fi
+
+# -- Execute -------------------------------------------------------------------
+
+# For Cygwin, switch paths to Windows format before running java
+if $cygwin; then
+  JAVA_HOME=`cygpath --absolute --windows "$JAVA_HOME"`
+  AGENT_HOME=`cygpath --absolute --windows "$AGENT_HOME"`
+  CLASSPATH=`cygpath --path --windows "$CLASSPATH"`
+fi
+
+# -- Run -----------------------------------------------------------------------
+
+if [ "$1" = "run" ]; then
+  shift
+  WORKER_JAVA_OPTS=
+  if [ "$1" = "-debug" ]; then
+    shift
+    WORKER_JAVA_OPTS="$JAVA_DEBUG_OPTS"
+  fi
+  cd "$AGENT_HOME/bin"
+  command_line="exec \"$JAVACMD\" -jar $MONITOR_JAVA_OPTS \
+    \"$AGENT_HOME/monitor/agent-monitor.jar\" \"$AGENT_HOME\" \
+    \"$AGENT_HOME/bin/worker-args.conf\" 7000 $WORKER_JAVA_OPTS \
+    -Dagent.log.to.console=y"
+  eval $command_line
+
+# -- Start ---------------------------------------------------------------------
+
+elif [ "$1" = "start" ] ; then
+  shift
+  WORKER_JAVA_OPTS=
+  if [ "$1" = "-debug" ]; then
+    shift
+    WORKER_JAVA_OPTS="$JAVA_DEBUG_OPTS"
+  fi
+  touch "$AGENT_HOME/var/log/ah3agent.out"
+  cd "$AGENT_HOME/bin"
+  command_line="\"$JAVACMD\" $MONITOR_JAVA_OPTS -jar \
+    \"$AGENT_HOME/monitor/agent-monitor.jar\" \"$AGENT_HOME\" \
+    \"$AGENT_HOME/bin/worker-args.conf\" 7000 $WORKER_JAVA_OPTS >\"$AGENT_HOME/var/log/stdout\" 2>&1 &"
+  eval $command_line
+
+  if [ ! -z "$1" -a -f "$1" ]; then
+    echo $! > "$1"
+  fi
+
+# -- Stop ----------------------------------------------------------------------
+
+elif [ "$1" = "stop" ] ; then
+
+  shift
+  FORCE=0
+  cd "$AGENT_HOME/bin"
+  command_line="exec \"$JAVACMD\" -jar \
+    \"$AGENT_HOME/monitor/agent-monitor.jar\" -shutdown \
+    >> \"$AGENT_HOME/var/log/ah3agent.out\" 2>&1"
+  eval $command_line
+
+# -- Usage ---------------------------------------------------------------------
+
+else
+#	Also, start -debug|run -debug to instruct java to listen on port 10000
+#	for remote JPDA Debugger connections.
+  echo "Usage: ah3agent {run|start|stop|stop -force}"
+  exit 1
+fi

@@ -1,0 +1,29 @@
+{
+  "name": "mysql",
+  "description": "Installs and configures mysql",
+  "long_description": "",
+  "maintainer": "Asim, Example.com",
+  "maintainer_email": "asim@example.com",
+  "license": "mysql",
+  "platforms": {
+  },
+  "dependencies": {
+  },
+  "recommendations": {
+  },
+  "suggestions": {
+  },
+  "conflicting": {
+  },
+  "providing": {
+  },
+  "replacing": {
+  },
+  "attributes": {
+  },
+  "groupings": {
+  },
+  "recipes": {
+  },
+  "version": "0.7.0"
+}

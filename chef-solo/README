@@ -1,0 +1,22 @@
+# tarball: chef-solo/chef.tar.gz unpacks as chef-solo
+# root:  chef-solo
+         -> chef.tar.gz		# tar of root
+	 -> cookbooks.tar.gz 	# tar of cookbooks
+	 -> archive/ 		# archive of packages
+	 -> chef0.7.sh		# install script
+	 -> install/		# configs dir
+	    -> server		# server configs
+	    -> client		# client chef-solo configs
+	       -> solo.rb	# default solo config
+	       -> *.chef.json	# per host specific json
+	       -> chef		# client wrapper
+
+# configuration
+deny all
+allow 10.0.0.0/8
+
+vhost: chef.example.com:80
+documentroot html/chef-solo/archive/
+
+vhost: chef.example.com:443
+documentroot html/chef-solo/

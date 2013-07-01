@@ -1,0 +1,51 @@
+#!/bin/bash
+#
+#
+# chkconfig: 345 90 40
+# description: maillog startup script
+#
+
+PIDFILE="/var/run/maillog.pid"
+PATH=$PATH:/usr/local/ruby/bin
+source /etc/init.d/functions
+
+function start {
+	if [ -f "$PIDFILE" ]; then PID=`cat $PIDFILE`; fi
+	if [ -n "$PID" ]; then
+	  echo "Maillog.rb is already running"
+	  exit 1
+	fi
+
+	echo "Starting maillog.rb"
+	ruby /root/scripts/maillog.rb -l /var/log/maillog &
+	echo $! > $PIDFILE
+	touch /var/lock/subsys/maillog
+}
+
+function stop {
+	if [ -f "$PIDFILE" ]; then PID=`cat $PIDFILE`; fi
+	if [ -z "$PID" ]; then
+	  echo "Maillog.rb is not running"
+	  exit 1
+	fi
+
+	echo "Stopping maillog.rb"
+	kill $PID
+	rm $PIDFILE
+	rm /var/lock/subsys/maillog
+}
+
+
+case "$1" in
+	start)
+	start	
+	;;
+	stop)
+	stop
+	;;
+	*)
+	echo $"Usage: $0 {start|stop}"
+	exit 1
+esac
+
+exit $?

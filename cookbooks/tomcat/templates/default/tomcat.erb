@@ -1,0 +1,98 @@
+#!/bin/bash
+# <%= @user %> start|stop script
+
+BASE=/usr/local/<%= @user %>
+$(echo "$2"|egrep -q "^instance[0-9]+$") && [ -d "/usr/local/<%= @user %>/$2" ] && BASE="/usr/local/<%= @user %>/$2"
+CATALINA_SCRIPT=$BASE/bin/catalina.sh
+PIDFILE=$BASE/conf/catalina.pid
+if [ -f $PIDFILE ]; then 
+    PID=`cat $PIDFILE`; 
+    EXISTS=true
+else
+    EXISTS=false
+fi
+
+function check_process {
+    if [ -n "$PID" ]; then
+	if (ps -p $PID)>/dev/null; then
+	    EXISTS=true
+	else
+	    EXISTS=false
+	fi
+    else
+	EXISTS=false
+    fi
+}
+
+function stop_tomcat {
+    if [ "$EXISTS" == "true" ]; then
+	echo "stopping <%= @user %>"
+	su <%= @user %> -c "$CATALINA_SCRIPT stop"
+	sleep 10
+
+        # if the app still exists lets force stop it
+	check_process
+	if [ "$EXISTS" == "true" ]; then
+	    echo "force stopping <%= @user %>"
+	    su <%= @user %> -c "$CATALINA_SCRIPT stop -force"
+	    sleep 5
+	fi
+
+        # if it isnt dead, lets kill it
+        check_process
+        if [ "$EXISTS" == "true" ]; then
+	    echo "killing <%= @user %>"
+	    kill $PID
+	    sleep 1
+	fi
+
+	# ok now kill -9
+        check_process
+        if [ "$EXISTS" == "true" ]; then
+	    echo "kill -9 <%= @user %>"
+	    kill -9 $PID
+	fi
+
+	check_process
+	if [ "$EXISTS" == "true" ]; then
+	    echo "<%= @user %> did not stop"
+	    return 1
+	else
+	    echo "<%= @user %> stopped"
+	    return 0
+	fi
+    else
+	echo "no pidfile found... checking for java processes"
+	if [ `ps aux | grep "catalina.base=$BASE" | grep -v grep | wc -l` -eq 0 ]; then
+	    echo "process is not running"
+	else
+	    ps aux | grep "catalina.base=$BASE" | grep -v grep
+	fi
+    fi
+}
+
+function start_tomcat {
+    check_process
+    if [ "$EXISTS" == "false" ]; then
+	echo "starting <%= @user %>"
+	su <%= @user %> -c "$CATALINA_SCRIPT start"
+    else
+	echo "<%= @user %> is already running"
+	return 1
+    fi
+}
+
+case "$1" in
+    stop)
+    stop_tomcat
+    ;;  
+    start)
+    start_tomcat
+    ;;    
+    *)
+    echo "usage: $0 {start|stop}"
+    exit 1
+
+esac
+
+exit $?

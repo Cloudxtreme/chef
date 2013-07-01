@@ -1,0 +1,31 @@
+#!/bin/bash
+
+# Usage: ./dnd [ON|OFF] [SIP]
+
+STATUS=$1
+SIP=$2
+LISTFILE=/usr/local/asterisk/etc/asterisk/asterisk-gen/list.csv
+USER=admin
+PASS=voip
+
+function set_status {
+    if [ "$STATUS" = "ON" ]
+    then
+	NAME=DND
+    elif [ "$STATUS" = "OFF" ]
+    then
+	NAME=`cat "$LISTFILE" | grep "^$SIP," | awk 'BEGIN { FS = "," } {print $3}'`
+    else
+	NAME=$SIP
+    fi
+    curl http://$USER:$PASS@$IP/sipuser.htm\?1 -FREDIRECT=reset.htm -FLINE1CALLERID="$NAME"; 
+    sleep 2; 
+    curl -m 5 http://admin:voip@$IP/reset.htm -FRESET=NORMAL
+}
+
+function get_IP {
+    IP=`cat "$LISTFILE" | grep "^$SIP," | awk 'BEGIN { FS = "," } {print $7}'`
+}
+
+get_IP
+set_status

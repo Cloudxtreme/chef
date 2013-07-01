@@ -1,0 +1,5 @@
+check process dk-milter with pidfile /var/run/dk-filter0.pid
+	group servers
+	start program "/etc/init.d/dk-milter start"
+	stop program "/etc/init.d/dk-milter stop"
+	if failed host 127.0.0.1 port 10035 timeout 10 seconds then restart

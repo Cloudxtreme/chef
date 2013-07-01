@@ -1,0 +1,35 @@
+#!/usr/bin/perl
+
+my @statuses = ("ESTABLISHED","SYN_SENT","SYN_RECV","FIN_WAIT1","FIN_WAIT2","TIME_WAIT","CLOSED","CLOSE_WAIT","LAST_ACK","CLOSING","UNKNOWN");
+my @ports = ( "80", "81", "443", "444", "445" );
+my %data = ();
+
+my $netstat = 'netstat -ant | awk \'$4 ~ /:(8[01]|44[345])$/ && $6 != "LISTEN" { split($4,a,":"); print a[2],$6;}\' | sort | uniq -c';
+
+# initialize to 0
+foreach $status (@statuses) {
+    foreach $port (@ports) {
+	$data{$status . "_" . $port} = 0;
+    }
+}
+
+sub send_data {
+    my $metric=shift;
+    my $value=shift;
+    select(undef, undef, undef, 0.05);
+    system("/usr/bin/gmetric -t uint16 -n $metric -v $value -d 60");
+}
+
+open (NETSTAT,"$netstat|") or die "unable to read netstat\n";
+
+while (<NETSTAT>) {
+    if ($_ =~ m/^\s+([0-9]+) ([0-9]{2,3}) (\w+)/) {
+	$data{$3 . "_" . $2} = $1;
+    }
+}
+
+close(NETSTAT);
+
+foreach $key (keys %data) {
+    &send_data($key, $data{$key});
+}

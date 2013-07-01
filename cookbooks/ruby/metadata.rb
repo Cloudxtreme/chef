@@ -1,0 +1,5 @@
+maintainer	"Asim, Example.com"
+maintainer_email  "asim@example.com"
+license 		"ruby"
+description 	"Installs and configures ruby"
+version 		"0.7"

@@ -1,0 +1,29 @@
+{
+  "name": "monit",
+  "description": "Installs and configures monit",
+  "long_description": "",
+  "maintainer": "Asim, Example.com",
+  "maintainer_email": "asim@example.com",
+  "license": "monit",
+  "platforms": {
+  },
+  "dependencies": {
+  },
+  "recommendations": {
+  },
+  "suggestions": {
+  },
+  "conflicting": {
+  },
+  "providing": {
+  },
+  "replacing": {
+  },
+  "attributes": {
+  },
+  "groupings": {
+  },
+  "recipes": {
+  },
+  "version": "0.7.0"
+}

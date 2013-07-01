@@ -1,0 +1,39 @@
+# fluent config file
+
+# sources
+<% node[:fluent][:sources].each do |source, settings| -%>
+<source>
+  <% settings[:params].each do |name,value| -%>
+  <% if name == "tag" && settings[:tag_append_host] -%>
+  <%= name %> <%= value %>.<%= node[:hostname] %>
+  <% else %>
+  <%= name %> <%= value %>
+  <% end -%>
+  <% end -%>
+</source>
+
+<% end -%>
+# matches
+<% node[:fluent][:matches].each do |match, settings| -%>
+
+<match <%= match %>>
+  <% settings.each do |name,value| -%>
+  <%= name %> <%= value %>
+  <% end -%>
+  <% if settings[:type] == "forward" -%>
+  <% node[:fluent][:servers].each do |server,settings| -%>
+
+  <server>
+  <% settings.each do |name,value| -%>
+  <%= name %> <%= value %>
+  <% end -%>
+  </server>
+  <% end -%>
+  <% end %>
+</match>
+<% end -%>
+
+<match **>
+  type file
+  path /var/log/fluent/unknown
+</match>

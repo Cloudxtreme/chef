@@ -1,0 +1,247 @@
+{
+  "common": {
+    "hosts": {
+      "10.0.0.33": [ "chef.localdomain", ],
+      "10.0.0.28": [ "db", "redis" ] 
+    },
+
+    "users": {
+      "use": "list",
+      "list": {
+	"crontab": 2002
+      }
+    }
+  },
+
+  "postfix": {
+    "catch-all": "catch-all@example.com",
+    "inet_interfaces": "localhost"
+  },
+
+  "monit": {
+    "gmond": {
+      "mem": "1000.0"
+    },
+
+    "nginx": { 
+      "host": "10.0.0.33",
+      "port": "80"
+    },
+
+    "mmonit": {
+      "hosts": [ "10.0.0.33:8080" ]
+    },
+
+    "network": "10.0.0.0/24",
+
+    "services": {
+      "urls": {
+        "aservice": "/health-check"
+      },
+
+      "app": [
+        "anthill",
+        "fluentd",
+        "nginx",
+	"mysql",
+        "ping",
+        "smtpd",
+        "gmond"
+      ],
+
+      "ping": {
+        "server21": "10.0.0.21",
+        "server22": "10.0.0.22",
+        "server17": "10.0.0.17",
+        "server28": "10.0.0.28",
+        "server29": "10.0.0.29"
+      }
+    },
+    
+    "services2": {
+      "app": {
+        "redis2": { "conn_host": "10.0.0.33", "conn_port": "6380", "template": "redis2" }
+      }
+    }
+  },
+
+  "mysql": {
+    "buffer_pool_size": "2G",
+    "server_id": 3,
+    "auto_increment_increment": 10,
+    "auto_increment_offset": 3,
+    "log_slave_updates": true,
+    "ssl_server": true,
+    "binlog_ignore_dbs": [ "mysql" ]
+  },
+
+  "nginx": {
+    "include_files": [ "allow_office_ips" ],
+    "vhost": {
+      "templates": [ "dc1admin.example.com", "chef.localdomain" ],
+      "ssl_domain": "dc1admin.example.com"
+    }
+  },
+
+  "ntp": {
+    "servers": [
+      "0.uk.pool.ntp.org",
+      "1.uk.pool.ntp.org",
+      "2.uk.pool.ntp.org",
+      "3.uk.pool.ntp.org"
+    ]
+  },
+
+  "fluent": {
+    "sources": {
+      "server": {
+        "params": {
+          "type": "forward",
+	  "port": "24224",
+	  "bind": "10.0.0.33"
+        }
+      }
+    },
+    "matches": {
+      "logsaver.**": {
+        "type": "file",
+        "path": "/var/log/fluent/logsaver",
+        "compress": "gz"
+      },
+      "nginx.**": {
+        "type": "file",
+	"path": "/var/log/fluent/nginx",
+	"compress": "gz"
+      },
+      "resque.**": {
+        "type": "file",
+        "path": "/var/log/fluent/resque",
+        "compress": "gz"
+      },
+      "unknown": {
+        "type": "file",
+	"path": "/var/log/fluent/unknown",
+	"compress": "gz"
+      }
+    }
+  },
+
+  "ganglia": {
+    "collector": true,
+    "host": "10.0.0.33",
+    "port": "8649",
+    "tcp_accept_port": "8651",
+    "name": "dc1",
+    "gmetad": {
+      "clusters": {
+        "dc1": [ "localhost:8651" ]
+      },
+      "trusted_hosts": [ "74.1.1.1" ],
+      "xml_port": "8654"
+    }
+  },
+
+  "iptables": {
+    "location": "dc1",
+    "role": "admin"
+  },
+
+  "logrotate": {
+    "services": {
+      "app": {
+        "rotate": 1,
+        "logs": [
+          "/rails/app/log/admin.log",
+        ],
+        "postrotate": [
+          "/etc/init.d/unicorn restart app"
+        ]
+      },
+      "redis": {
+        "copytruncate": true,
+        "rotate": 1,
+        "logs": [
+          "/usr/local/redis2/logs/redis.log"
+        ]
+      }
+    }
+  },
+
+  "rails": {
+    "env": "administration",
+    "unicorn": {
+      "app": {
+        "start": true,
+	"processes": 2,
+	"address": "10.0.0.33",
+        "environment_variables": {
+	  "RAILS_ENV": "admin"
+        }
+      }
+    }
+  },
+
+  "redis": {
+    "port": "6380",
+    "address": "10.0.0.33"
+  },
+
+  "scripts": {
+    "functions": {
+      "root": [ "fluent_logs" ]
+    },
+    "sftp": {
+      "databases": [
+        "mysql",
+	"db",
+	"cache"
+      ],
+      "dir": "/data/database-backups",
+      "hostname": "server28"
+    }
+  },
+  
+  "security": {
+    "fail2ban": {
+      "ignoreips": [ "10.1.1.1" ]
+    }
+  },
+
+  "sudoers": {
+    "include": {
+      "builder": [
+        "/etc/init.d/unicorn1.9",
+      ]
+    } 
+  },
+
+  "run_list": [    
+    "recipe[common]",
+    "recipe[common::hosts]",
+    "recipe[common::libxml2]",
+    "recipe[common::7zip]",
+    "recipe[iptables::server]",
+    "recipe[security]",
+    "recipe[sudoers]",
+    "recipe[mysql::percona_server]",
+    "recipe[mysql::ssl]",
+    "recipe[ntp]",
+    "recipe[timezone]",	
+    "recipe[postfix]",
+    "recipe[ganglia::gmetad]",
+    "recipe[ganglia]",
+    "recipe[nginx::server]",
+    "recipe[ruby]",
+    "recipe[rvm::ruby19]",
+    "recipe[redis]",
+    "recipe[logrotate]",
+    "recipe[fluentd]",
+    "recipe[scripts]",
+    "recipe[scripts::sftp]",
+    "recipe[anthill::agent]",
+    "recipe[monit::app]",
+    "recipe[cron::fluent_logs]",
+    "recipe[cron::gmetric_tcp_connections]",
+    "recipe[cron::gmetric_quote_avg_time]",
+  ]
+}

@@ -1,0 +1,31 @@
+{
+  "name": "postfix",
+  "description": "Installs/Configures postfix",
+  "long_description": "",
+  "maintainer": "Asim Aslam",
+  "maintainer_email": "asim@example.com",
+  "license": "postfix",
+  "platforms": {
+  },
+  "dependencies": {
+    "ganglia": ">= 0.0.0",
+    "perl": ">= 0.0.0"
+  },
+  "recommendations": {
+  },
+  "suggestions": {
+  },
+  "conflicting": {
+  },
+  "providing": {
+  },
+  "replacing": {
+  },
+  "attributes": {
+  },
+  "groupings": {
+  },
+  "recipes": {
+  },
+  "version": "0.7.0"
+}

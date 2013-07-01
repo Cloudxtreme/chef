@@ -1,0 +1,69 @@
+#!/usr/bin/perl
+#
+# Feeds ganglia with web server error rate information.
+#
+# Expects logs for 1 minute.
+
+# Defaults
+$GMETRIC = "/usr/bin/gmetric";
+$GMETRIC_ARGS="";
+
+$count200 = 0;
+$count300 = 0;
+$count400 = 0;
+$count500 = 0;
+$countOther = 0;
+$start = time;
+
+sub broadcast {
+    my $metric = shift;
+    my $value = shift;
+    my $type = shift;
+    my $units = shift;
+    $cmd = "$GMETRIC $GMETRIC_ARGS --name=$metric --value=$value --type=$type --units=$units";
+    $ret = system($cmd) / 256;
+    if ($ret == -1) {
+        print("Unable to send data to ganglia: $!");
+    }
+}
+
+sub report {
+    lock $count500;
+    $total = $count200 + $count300 + $count400 + $count500 + $countOther;
+    $delta = 60;
+    $totalRate = $total / $delta;
+    $twoRate = $count200 / $delta;
+    $threeRate = $count300 / $delta;
+    $fourRate = $count400 / $delta;
+    $fiveRate = $count500 / $delta;
+    $otherRate = $countOther / $delta;
+    broadcast "apache_200", $twoRate, "float", "req_per_sec" ;
+    broadcast "apache_300", $threeRate, "float", "req_per_sec" ;
+    broadcast "apache_400", $fourRate, "float", "req_per_sec" ;
+    broadcast "apache_500", $fiveRate, "float", "req_per_sec" ;
+    broadcast "apache_other", $otherRate, "float", "req_per_sec" ;
+    broadcast "apacheTotal", $totalRate, "float", "req_per_sec" ;
+}
+
+sub parse_line {
+    my $line = shift;
+    $_ = $line;
+    if (/\" 5\d\d /) {
+        $count500++;
+    } elsif (/\" 2\d\d /) {
+		    $count200++;
+    } elsif (/\" 3\d\d /) {
+		    $count300++;
+    } elsif (/\" 4\d\d /) {
+		    $count400++;
+		} else {
+        $countOther++;
+    }
+    lock $count500;   
+}
+
+# read the lines and then send them to ganglia
+while (<>) {
+    parse_line $_;
+}
+report;

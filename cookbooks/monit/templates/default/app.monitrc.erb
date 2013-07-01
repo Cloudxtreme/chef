@@ -1,0 +1,34 @@
+#
+# monit control file
+#
+
+set daemon 60 # Poll at 2-minute intervals
+set logfile syslog facility log_daemon
+set alert support@example.com but not on { instance }
+set mailserver localhost
+<% node[:monit][:mmonit][:hosts].each do |host| %>
+set mmonit http://admin:swordfish@<%= host %>/collector
+<% end %>
+
+set httpd port 2812
+    allow localhost   # Allow localhost to connect
+    allow <%= node[:monit][:network] %>
+    allow admin:swordfish
+
+check system <%= node[:monit][:hostname] %>
+    if loadavg (1min) > 6 then alert
+    if loadavg (5min) > 4 then alert
+    if memory usage > 85% then alert
+    if cpu usage (user) > 70% then alert
+    if cpu usage (system) > 30% then alert
+    if cpu usage (wait) > 20% then alert
+
+check device rootfs with path /
+   if space usage > 85% then alert
+
+<% node[:monit][:drives].each do |device,path| -%>
+check device <%= device %> with path <%= path %>
+   if space usage > 85% then alert
+<% end -%>
+
+INCLUDE "/etc/monit.d/*"

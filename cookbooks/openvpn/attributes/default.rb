@@ -1,0 +1,6 @@
+default[:openvpn][:route] = "10.0.1.0 255.255.255.0"
+default[:openvpn][:version] = "2.0.9"
+default[:openvpn][:lzo_version] = "2.03"
+default[:openvpn][:port] = "1194"
+default[:openvpn][:protocol] = "udp"
+default[:openvpn][:tundevice] = "tun0"

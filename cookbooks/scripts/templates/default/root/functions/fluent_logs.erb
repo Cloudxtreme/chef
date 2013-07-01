@@ -1,0 +1,9 @@
+fluent_logs() {
+    LOG_DIR=<%= node[:scripts][:functions][:fluent_logs][:log_dir] %>
+
+    if [ -n "$LOG_DIR" ] && [ -d "$LOG_DIR" ]; then
+        find "$LOG_DIR" -name "*.log.gz" -mtime +7 -exec rm {} \;
+    else
+        "log dir variable not set or directory $LOG_DIR does not exist"
+    fi
+}

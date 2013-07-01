@@ -1,0 +1,84 @@
+[mysqld]
+# server settings
+bind-address=0.0.0.0
+socket=/tmp/mysql.sock
+datadir=/usr/local/mysql/data
+server-id=<%= node[:mysql][:server_id] %>
+
+# variables
+transaction-isolation=REPEATABLE-READ
+max_allowed_packet=16M
+max-connections=<%= node[:mysql][:max_connections] %>
+
+# ssl settings
+<% if node[:mysql][:ssl_server] -%>
+ssl
+#ssl-cipher=DHE-RSA-AES256-SHA
+ssl-ca=/etc/mysql/certs/ca-cert.pem
+ssl-cert=/etc/mysql/certs/server-cert.pem
+ssl-key=/etc/mysql/certs/server-key.pem
+<% end -%>
+
+# log settings
+log-error=/usr/local/mysql/data/<%= node[:hostname] %>.err
+log-bin=<%= node[:hostname] %>-bin
+log-queries-not-using-indexes
+slow_query_log
+long_query_time=2
+expire_logs_days=10
+binlog_format=mixed
+<% node[:mysql][:binlog_ignore_dbs].each do |db| -%>
+binlog-ignore-db=<%= db %>
+<% end -%>
+<% if node[:mysql][:log_slave_updates] -%>
+log-slave-updates
+<% end -%>
+
+# replication settings
+<% if node[:mysql][:auto_increment_increment] > 1 -%>
+auto_increment_increment=<%= node[:mysql][:auto_increment_increment] %>
+<% end -%>
+<% if node[:mysql][:auto_increment_offset] > 1 -%>
+auto_increment_offset=<%= node[:mysql][:auto_increment_offset] %>
+<% end -%>
+
+# Performance
+query_cache_type=1
+query_cache_size=64M
+query_cache_limit=2M
+table_open_cache=4096
+max_heap_table_size=128M
+tmp_table_size=128M
+thread_cache_size=<%= node[:mysql][:thread_cache_size] %>
+thread_concurrency=<%= node[:mysql][:thread_concurrency] %>
+flush_time=1800
+read_buffer_size=2M
+read_rnd_buffer_size=8M
+
+# MyISAM config
+sort_buffer_size=2M
+key_buffer_size=256M
+myisam_sort_buffer_size=64M
+
+# InnoDB config
+default-storage-engine=INNODB
+innodb_additional_mem_pool_size=20M
+innodb_flush_log_at_trx_commit=1
+innodb_log_buffer_size=8M
+innodb_buffer_pool_size=<%= node[:mysql][:buffer_pool_size] %>
+innodb_log_file_size=128M
+innodb_file_per_table=1
+innodb_thread_concurrency=16
+innodb_flush_method=O_DIRECT
+
+[mysql.server]
+user=mysql
+basedir=/usr/local/mysql
+
+[mysqld_safe]
+err-log=/var/log/mysqld.log
+pid-file=/var/run/mysqld/mysqld.pid
+
+[mysqldump]
+quick
+max_allowed_packet = 16M

@@ -1,0 +1,261 @@
+{
+  "common": {
+    "hosts": {
+      "10.0.1.201": [ "10.0.1.201", "chef.localdomain" ],
+      "10.0.1.101": [ "10.0.1.101", "dbhost", "redis" ] 
+    },
+
+    "users": {
+      "manage_home": true,
+      "use": "list",
+      "list": {
+        "builder": 2001,
+        "crontab": 2002
+      }
+    }
+  },
+
+  "postfix": {
+    "catch-all": "catch-all@example.com",
+    "inet_interfaces": "localhost"
+  },
+
+ "monit": {
+    "actions": [
+      "enable",
+      "start"
+    ],
+    "app": {
+      "address": "10.0.1.201"
+    },
+
+    "nginx": { 
+      "host": "10.0.1.201",
+      "port": "80"
+    },
+
+    "mmonit": {
+      "hosts": [ "10.0.1.201:8080" ]
+    },
+
+    "gmond": {
+      "mem": "750.0",
+      "host": "10.0.1.201"
+    },
+
+    "network": "10.0.1.0/24",
+
+    "services": {
+      "urls": {
+       	"app": "/health-check"
+      },
+
+      "app": [
+        "anthill",
+        "fluentd",
+        "nginx",
+	"mysql",
+        "ping",
+        "smtpd",
+	"gmond"
+      ],
+
+      "ping": {
+        "gdc3-web1": "10.0.1.21",
+        "gdc3-web2": "10.0.1.22",
+        "gdc3-web3": "10.0.1.23",
+        "gdc3-web4": "10.0.1.24",
+        "gdc3-app1": "10.0.1.101"
+      }
+    },
+
+    "services2": {
+      "app": {
+        "redis2": { "conn_host": "10.0.1.201", "conn_port": "6380", "template": "redis2" }
+      }
+    }
+  },
+
+  "fluent": {
+    "log_dir": "/mnt/drive/fluent",
+    "log_link_dir": "/var/log/fluent",
+    "sources": {
+      "server": {
+        "params": {
+          "type": "forward",
+          "port": "24224",
+          "bind": "10.0.1.201"
+        }
+      }
+    },
+    "matches": {
+      "logsaver.**": {
+        "type": "file",
+        "path": "/var/log/fluent/logsaver",
+        "compress": "gz"
+      },
+      "nginx.**": {
+        "type": "file",
+        "path": "/mnt/drive/fluent/nginx",
+        "compress": "gz"
+      },
+      "unknown": {
+        "type": "file",
+        "path": "/mnt/drive/fluent/unknown",
+        "compress": "gz"
+      }
+    }
+  },
+
+  "ganglia": {
+    "collector": true,
+    "host": "10.0.1.201",
+    "bind": "10.0.1.201",
+    "port": "8649",
+    "tcp_accept_port": "8651",
+    "name": "gdc3",
+    "gmetad": {
+      "clusters": {
+        "gdc3": [ "localhost:8651" ]
+      },
+      "xml_port": "8654"
+    }
+  },
+
+  "iptables": {
+    "location": "gdc3",
+    "role": "admin",
+    "overwrite": true
+  },
+
+  "logrotate": {
+    "services": {
+      "app": {
+        "rotate": 1,
+        "logs": [
+          "/rails/app/log/admin.log",
+        ],
+        "postrotate": [
+          "/etc/init.d/unicorn1.9 restart app"
+        ]
+      },
+      "redis": {
+        "copytruncate": true,
+        "rotate": 1,
+        "logs": [
+          "/usr/local/redis2/logs/redis.log"
+        ]
+      }
+    }
+  },
+
+  "mysql": {
+    "buffer_pool_size": "2G",
+    "server_id": 4,
+    "template": "app3",
+    "install_dir": "/mnt/drive",
+    "auto_increment_increment": 10,
+    "auto_increment_offset": 4,
+    "log_slave_updates": true,
+    "ssl_server": true,
+    "binlog_ignore_dbs": [ "mysql" ]
+  },
+
+  "nginx": {
+    "install_dir": "/mnt/drive",
+    "include_files": [ "allow_office_ips" ],
+    "vhost": {
+      "ssl_domain": "gdc3admin.example.com"
+    }
+  },
+
+  "ntp": {
+    "servers": [
+      "0.uk.pool.ntp.org",
+      "1.uk.pool.ntp.org",
+      "2.uk.pool.ntp.org",
+      "3.uk.pool.ntp.org"
+    ]
+  },
+
+  "rails": {
+    "tarball_host": "https://chef.example.com/archive",
+    "env": "admin",
+    "unicorn": {
+      "app": {
+        "start": true,
+	"processes": 2,
+	"address": "10.0.1.201",
+        "environment_variables": {
+	  "RAILS_ENV": "admin",
+          "GDC_PLATFORM": 1
+        }
+      }
+    }
+  },	
+
+  "redis": {
+    "port": "6379",
+    "address": "10.0.1.201",
+    "install_dir": "/mnt/drive"
+  },
+
+  "scripts": {
+    "functions": {
+      "fluent_logs": { 
+        "log_dir": "/mnt/drive/fluent" 
+      },
+      "root": [ "fluent_logs" ]
+    },
+    "sftp": {
+      "databases": [ 
+        "mysql",
+        "db",
+        "cache"
+      ],
+      "dir": "/mnt/drive/database-backups",
+      "hostname": "gdc3-app1"
+    },
+    "sftp_backups": {
+      "dir": "/mnt/drive"
+    }
+  },
+
+  "sudoers": {
+    "include": {
+      "builder": [
+        "/etc/init.d/unicorn1.9",
+      ]
+    } 
+  },
+
+  "run_list": [    
+    "recipe[common]",
+    "recipe[common::hosts]",
+    "recipe[common::libxml2]",
+    "recipe[common::7zip]",
+    "recipe[iptables::server]",
+    "recipe[security::chkrootkit]",
+    "recipe[security::fail2ban]",
+    "recipe[sudoers]",
+    "recipe[mysql::percona_server]",
+    "recipe[mysql::ssl]",
+    "recipe[nginx::server]",
+    "recipe[ntp]",
+    "recipe[timezone]",	
+    "recipe[postfix]",
+    "recipe[fluentd]",
+    "recipe[ganglia::gmetad]",
+    "recipe[ganglia]",
+    "recipe[rvm::ruby19]",
+    "recipe[ruby]",
+    "recipe[redis]",
+    "recipe[logrotate]",
+    "recipe[scripts]",
+    "recipe[scripts::sftp]",
+    "recipe[anthill::agent]",
+    "recipe[monit::app]",
+    "recipe[cron::fluent_logs]",
+    "recipe[cron::gmetric_tcp_connections]",
+  ]
+}

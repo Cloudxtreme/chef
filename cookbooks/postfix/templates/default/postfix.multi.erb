@@ -1,0 +1,66 @@
+#!/bin/bash
+#
+# postfix
+#
+# chkconfig: 345 90 34
+# description: Runs postfixes
+
+
+# Source function library.
+. /etc/init.d/functions
+
+RETVAL=0
+
+start()
+{
+        if [ -f /etc/postfix.rc ];
+          then
+	   for j in `cat /etc/postfix.rc`; do
+	     RETVAL=0
+	     if [ -d "/usr/local/$j" ]; then
+               echo $"Starting Postfix $j"
+	       /usr/local/$j/sbin/postfix start
+	       RETVAL=$?
+               [ $RETVAL -eq 0 ] && touch /var/lock/subsys/"$j" && success
+	       echo
+	     fi
+	   done
+        fi
+}
+
+stop()
+{
+	   if [ -f /etc/postfix.rc ];
+	     then
+	      for j in `cat /etc/postfix.rc`; do
+		if [ -d "/usr/local/$j" ]; then
+		  RETVAL=0
+                  echo $"Shutting Down $j"
+		  /usr/local/$j/sbin/postfix stop
+                  RETVAL=$?
+                  [ $RETVAL -eq 0 ] && rm -f /var/lock/subsys/"$j" && success
+	          echo
+		fi
+	      done
+	   fi
+}
+
+case "$1" in
+ start)
+	start
+	;;
+ stop)
+	stop
+ 	;;
+ restart)
+	stop
+	sleep 2
+	start
+	;;
+ *)
+ 	echo $"Usage: $0 {start|stop|restart}"
+	exit 1
+	;;
+esac
+
+exit $RETVAL

@@ -1,0 +1,5 @@
+check process anthill-agent with pidfile /var/run/ah3agent.pid
+	group servers
+	start program "/etc/init.d/anthill.agent start"
+	stop program "/etc/init.d/anthill.agent stop"	
+

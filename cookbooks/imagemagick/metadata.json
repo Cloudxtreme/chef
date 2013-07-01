@@ -1,0 +1,29 @@
+{
+  "name": "imagemagick",
+  "description": "Installs and configures imagemagick",
+  "long_description": "",
+  "maintainer": "Asim, Example.com",
+  "maintainer_email": "asim@example.com",
+  "license": "imagemagick",
+  "platforms": {
+  },
+  "dependencies": {
+  },
+  "recommendations": {
+  },
+  "suggestions": {
+  },
+  "conflicting": {
+  },
+  "providing": {
+  },
+  "replacing": {
+  },
+  "attributes": {
+  },
+  "groupings": {
+  },
+  "recipes": {
+  },
+  "version": "0.7.0"
+}

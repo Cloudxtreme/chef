@@ -1,0 +1,9 @@
+#
+# monit internal control file
+#
+
+set daemon 60 # Poll at 2-minute intervals
+set logfile syslog facility log_daemon
+
+set httpd port 2812
+    allow localhost   # Allow localhost to connect

@@ -1,0 +1,5 @@
+maintainer	"Asim, Example.com"
+maintainer_email  "asim@example.com"
+license 		"couchdb"
+description 	"Installs and configures couchdb"
+version 		"0.7"

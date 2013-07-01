@@ -1,0 +1,33 @@
+#!/bin/bash
+
+# chkconfig: 345 62 30
+# description: Lighttpd
+# Source function library.
+. /etc/init.d/functions
+
+RETVAL=0
+
+
+function lighttpd_start {
+        /usr/local/lighttpd/sbin/lighttpd -f /usr/local/lighttpd/etc/lighttpd.conf
+	touch /var/lock/subsys/lighttpd
+}
+
+function lighttpd_stop {
+        kill `cat /var/run/lighttpd.pid`
+	/bin/rm -f /var/lock/subsys/lighttpd
+}
+
+
+case $1 in
+start)
+        lighttpd_start
+        ;;
+stop)
+        lighttpd_stop
+        ;;
+
+*)
+
+esac
+

@@ -1,0 +1,5 @@
+maintainer	"Asim, Example.com"
+maintainer_email  "asim@example.com"
+license 		"lighttpd"
+description 	"Installs and configures lighttpd"
+version 		"0.7"

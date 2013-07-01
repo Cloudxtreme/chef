@@ -1,0 +1,6 @@
+ddos() {
+    for i in `netstat -antp | grep SYN_RECV | sed 's/:/ /g' | awk '{print $6}' | sort -n | uniq -c | sort -n | egrep '^ +[1-9][0-9]{2,}' | awk '{print $2}'`; do 
+        /sbin/iptables -D DDOS -m tcp -p tcp --source $i -j DROP >& /dev/null
+        /sbin/iptables -I DDOS -m tcp -p tcp --source $i -j DROP 
+    done
+}

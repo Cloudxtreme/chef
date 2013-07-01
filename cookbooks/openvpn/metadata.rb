@@ -1,0 +1,5 @@
+maintainer       "Asim, Example.com"
+maintainer_email "asim@example.com"
+license          "OpenVPN 2.0.9"
+description      "Installs/Configures openvpn"
+version          "0.7"

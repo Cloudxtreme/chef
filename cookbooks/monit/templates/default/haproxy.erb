@@ -1,0 +1,5 @@
+check process haproxy with pidfile <%= node[:monit][:haproxy][:pidfile] %>
+	group servers
+	start program "/etc/init.d/haproxy start"
+	stop program "/etc/init.d/haproxy stop"
+	if failed host 127.0.0.1 port <%= node[:monit][:haproxy][:port] %> timeout 10 seconds then restart

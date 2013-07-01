@@ -1,0 +1,5 @@
+maintainer	"Asim, Example.com"
+maintainer_email  "asim@example.com"
+license 		"ant"
+description 	"Installs and configures ant"
+version 		"0.7"

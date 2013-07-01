@@ -1,0 +1,5 @@
+maintainer	"Asim, Example.com"
+maintainer_email  "asim@example.com"
+license 		"tomcat"
+description 	"Installs and configures tomcat"
+version 		"0.7"

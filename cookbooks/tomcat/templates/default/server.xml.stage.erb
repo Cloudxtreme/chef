@@ -1,0 +1,36 @@
+<Server port="8005" shutdown="SHUTDOWN">
+
+  <GlobalNamingResources>
+    <!-- Used by Manager webapp -->
+    <Resource name="UserDatabase" auth="Container"
+              type="org.apache.catalina.UserDatabase"
+       description="User database that can be updated and saved"
+           factory="org.apache.catalina.users.MemoryUserDatabaseFactory"
+          pathname="conf/tomcat-users.xml" />
+  </GlobalNamingResources>
+
+  <Service name="Catalina">
+    <Connector port="8080" URIEncoding="UTF-8"/>
+
+    <!-- This is here for compatibility only, not required -->
+    <Connector port="8009" protocol="AJP/1.3" />
+
+        <!-- JMX Management Console -->
+        <Connector port="0" 
+                    handler.list="mx" 
+                    mx.enabled="true" 
+                    mx.httpHost="localhost"
+                    mx.httpPort="8081"
+                    protocol="AJP/1.3" />
+                    
+    <Engine name="Catalina" defaultHost="localhost">
+      <Realm className="org.apache.catalina.realm.UserDatabaseRealm" resourceName="UserDatabase" />
+      <Host name="localhost" appBase="webapps" autoDeploy="false" unpackWARs="false">
+         <Valve className="org.apache.catalina.valves.AccessLogValve"
+          prefix="localhost_access_log." suffix=".txt"
+          pattern="%h %l %u %t \&quot;%r\&quot; %s %b \&quot;%{Referer}i\&quot; \&quot;%{User-Agent}i\&quot; %{examplevisitor}c %T/%D"/>
+      </Host>
+    </Engine>
+  </Service>
+</Server>
+

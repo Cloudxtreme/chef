@@ -1,0 +1,50 @@
+scp_weblog() {
+    local date=`date +"%Y%m%d"`
+    local host=$(hostname)
+    local backup_host=<%= node[:scripts][:backup_host] %>
+    local success=1
+    local log="$1.1.gz"
+    access_log="$host.$1.$date.gz.gpg"
+
+    if [ ! -f "$log" ]; then
+        echo "DOES NOT EXIST $log"
+    else
+        gpg -e -r "Example <admin@example.com>" --trust-model always -o - $log > /var/tmp/$access_log
+	sha1sum  /var/tmp/$access_log > /var/tmp/$access_log.sha1sum
+        for ((j=0;j<=3;j++)); do
+            scp /var/tmp/$access_log /var/tmp/$access_log.sha1sum crontab@$backup_host:/data/web_logs/
+            if [ $? -eq 0 ]; then
+                success=0
+                break
+            fi
+        done
+        if [ $success -eq 1 ]; then echo "SCP FAILED - $access_log"; fi
+
+	/bin/rm -f /var/tmp/$access_log /var/tmp/$access_log.sha1sum
+    fi
+}
+
+weblogs() {
+  # Backup weblogs
+    misc_logs
+    echo "SCP weblogs @ `date`"
+    for dir in `ls /web`; do
+        if [ -d "/web/$dir/logs" ]; then
+            pushd "/web/$dir/logs" >/dev/null
+            for log in `ls | grep access_log$`; do
+                scp_weblog "$log"
+            done
+            popd >/dev/null
+        else
+            echo "DOES NOT EXIST /web/$dir/logs"
+        fi
+    done
+}
+
+misc_logs() {
+  # Backup misc logs
+    pushd /usr/local/apache2/logs >/dev/null
+    for log in access_log heatmap.log error_log; do scp_weblog "$log" ; done
+    popd >/dev/null
+}
+

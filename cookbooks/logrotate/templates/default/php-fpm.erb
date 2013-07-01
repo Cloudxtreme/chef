@@ -1,0 +1,16 @@
+# php-fpm log rotation
+
+<%= node[:logrotate][:php][:log_file] %>
+
+{
+  daily
+  missingok
+  rotate 60
+  compress
+  notifempty
+  sharedscripts
+  postrotate
+    kill -USR1 `cat <%= node[:logrotate][:php][:pid_file] %>`
+  endscript
+}
+

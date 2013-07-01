@@ -1,0 +1,46 @@
+# Default values
+#
+#USER="dk-milt"
+#PORT="local:/var/run/dk-milter/dk.sock"
+#SIGNING_DOMAIN="example.com"
+#SELECTOR_NAME="default"
+#KEYFILE="/etc/mail/domainkeys/dk_${SIGNING_DOMAIN}.pem"
+#SIGNER=yes
+#VERIFIER=yes
+#CANON=simple
+#REJECTION="bad=r,dns=t,int=t,no=a,miss=r"
+#EXTRA_ARGS="-h -l -D"
+#MILTER_GROUP="mail"
+
+# User configuration
+#
+#PORT0="inet:10034@localhost"
+#SIGNER0=no
+#PORT1="inet:10035@localhost"
+#VERIFIER1=no
+#...
+# Default values
+#
+USER="dk-milt"
+#PORT="local:/var/run/dk-milter/dk.sock"
+PORT="inet:10035@localhost"
+SIGNING_DOMAIN="mail.example.com"
+KEYNAME="mail.example.com"
+SELECTOR_NAME="default"
+KEYFILE="/etc/mail/domainkeys/dk_${KEYNAME}.pem"
+SIGNER=yes
+VERIFIER=no
+CANON=simple
+REJECTION="bad=r,dns=t,int=t,no=a,miss=r"
+TRUSTED_HOSTS="/etc/mail/domainkeys/trusted-hosts"
+EXTRA_ARGS="-h -l -D -i $TRUSTED_HOSTS"
+MILTER_GROUP="mail"
+
+# User configuration
+#
+#PORT0="inet:10034@localhost"
+#SIGNER0=no
+#PORT1="inet:10035@localhost"
+#VERIFIER1=no
+#...
+

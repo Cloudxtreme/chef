@@ -1,0 +1,13 @@
+# Keyfile
+##
+##      pattern:domain:keypath
+##
+##  where "pattern" is a pattern of user@host to match, with "*" being
+##  allowed as a wildcard; "domain" is the signing domain; and "keypath"
+##  is the path to the private key to use to generate signatures for such
+##  users.  The selector used will be the filename portion of "keypath".
+##  Blank lines are ignored, and the hash ("#") character is interpreted
+##  as the beginning of a comment.  See dkim-filter.conf(5) for more
+##  information
+
+#*@example.com:example.com:/etc/mail/dkim/keys/example.com/default

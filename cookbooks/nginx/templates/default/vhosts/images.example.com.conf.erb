@@ -1,0 +1,34 @@
+server {
+    listen       81;
+    server_name  images.example.com "";
+    include /usr/local/nginx/conf/aliases.conf;
+    include /usr/local/nginx/conf/deny.conf;
+
+    root /web/www.example.com/html;
+
+    location ~ /(blank|test|maintenance)\.html$ {
+        allow all;
+    }       
+
+    location ~* \.html$ {
+        deny all;
+    }
+}
+
+server {
+    listen  444;
+    server_name images.example.com "";
+    include /usr/local/nginx/conf/ssl.conf;
+    include /usr/local/nginx/conf/deny.conf;
+    include /usr/local/nginx/conf/aliases.conf;
+
+    root /web/www.example.com/html;
+
+    location ~ /(blank|test|maintenance)\.html$ {
+        allow all;
+    }       
+
+    location ~* \.html$ {
+        deny all;
+    }
+}

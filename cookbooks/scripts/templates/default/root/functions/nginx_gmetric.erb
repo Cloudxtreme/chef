@@ -1,0 +1,3 @@
+nginx_gmetric() {
+    grep `date -d "60 seconds ago" "+%d/%b/%Y:%H:%M"` /usr/local/nginx/logs/*.log | perl /root/ganglia/gmetric/nginx_error.pl
+}

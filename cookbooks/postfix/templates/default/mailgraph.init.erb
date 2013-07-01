@@ -1,0 +1,51 @@
+#!/bin/bash
+#
+#
+# chkconfig: 345 90 40
+# description: mailgraph startup script
+#
+
+PIDFILE="/var/run/mailgraph.pid"
+
+source /etc/init.d/functions
+
+function start {
+	if [ -f "$PIDFILE" ]; then PID=`cat $PIDFILE`; fi
+	if [ -n "$PID" ]; then
+	  echo "Mailgraph is already running"
+	  exit 1
+	fi
+
+	echo "Starting mailgraph"
+	perl /usr/bin/mailgraph.pl -l /var/log/maillog &
+	echo $! > $PIDFILE
+	touch /var/lock/subsys/mailgraph
+}
+
+function stop {
+	if [ -f "$PIDFILE" ]; then PID=`cat $PIDFILE`; fi
+	if [ -z "$PID" ]; then
+	  echo "Mailgraph is not running"
+	  exit 1
+	fi
+
+	echo "Stopping mailgraph"
+	kill $PID
+	rm $PIDFILE
+	rm /var/lock/subsys/mailgraph
+}
+
+
+case "$1" in
+	start)
+	start	
+	;;
+	stop)
+	stop
+	;;
+	*)
+	echo $"Usage: $0 {start|stop}"
+	exit 1
+esac
+
+exit $?

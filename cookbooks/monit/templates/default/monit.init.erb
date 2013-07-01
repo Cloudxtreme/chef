@@ -1,0 +1,50 @@
+#!/bin/bash
+
+# chkconfig: 345 96 30
+# description: Monit
+# Source function library.
+. /etc/init.d/functions
+
+RETVAL=0
+
+monit=/usr/local/monit/bin/monit
+
+start() {  
+    $monit && touch /var/lock/subsys/monit
+}
+
+stop() {
+    $monit quit && /bin/rm -f /var/lock/subsys/monit
+}
+
+reload() {
+    if $($monit -t); then
+	$monit reload
+    else
+	echo "config validation failed"
+    fi
+}
+
+restart() {
+    stop
+    start
+}
+
+case $1 in
+    start)
+	start
+        ;;
+    quit|stop)
+	stop
+        ;;
+    reload)
+	reload
+        ;;
+    restart)
+	restart
+	;;
+    
+    *)
+	echo "usage: $0 {start|stop|reload|restart|quit}"
+	exit 1
+esac

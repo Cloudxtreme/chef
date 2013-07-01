@@ -1,0 +1,15 @@
+#!/bin/bash
+
+if [ -z "$1" ] || [ -z "$2" ]; then
+  echo "Specify range, example: 1 10"
+  exit 1
+fi
+
+for i in `seq $1 $2`; do 
+  POSTSUPER="/usr/local/postfix$i/sbin/postsuper"
+  if [ -f $POSTSUPER ]; then  
+    $POSTSUPER -r ALL
+  else
+    echo "Postfix $i does not exist"
+  fi
+done

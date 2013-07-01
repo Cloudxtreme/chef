@@ -1,0 +1,5 @@
+check process nginx with pidfile /usr/local/nginx/logs/nginx.pid
+        group servers
+        start program "/etc/init.d/nginx start"
+        stop program "/etc/init.d/nginx stop"
+

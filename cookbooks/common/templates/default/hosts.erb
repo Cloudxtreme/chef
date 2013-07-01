@@ -1,0 +1,6 @@
+127.0.0.1	<% if node[:common][:set_localhost_name] -%><%= node[:fqdn] %> <%= node[:hostname] %><% end -%> localhost.localdomain localhost
+::1	localhost6.localdomain6 localhost6
+
+<% node[:common][:hosts].each do |ip,hosts| -%>
+<%= ip %>  <% hosts.each do |host| %><%= host %> <% end %> 
+<% end -%>

@@ -1,0 +1,10 @@
+core_cleanup() {
+    # Cleanup cores
+    pushd /cores >/dev/null
+
+    echo -e "\nCores `date` \n" >> cores.index
+    ls -lhat >> cores.index
+    find . -maxdepth 1 -type f -mmin +10 -name "core\.*" -not -name "*\.gz" -exec gzip {} \;
+    find . -maxdepth 1 -type f -mmin +720 -name "core\.*" -exec /bin/rm {} \;
+    popd >/dev/null
+}

@@ -1,0 +1,5 @@
+check process gmond matching "/usr/sbin/gmond"
+	group servers
+	start program "/etc/init.d/gmond start"
+	stop program "/etc/init.d/gmond stop"
+ 	if totalmem <%= node[:monit][:gmond][:mem] %> MB for 5 cycles then restart

@@ -1,0 +1,17 @@
+cert = <%= node[:stunnel][:cert] %>
+chroot = /var/run/stunnel/
+pid = /stunnel.pid
+setuid = nobody
+setgid = nobody
+debug = 7
+output = /var/log/stunnel.log
+<% if node[:stunnel][:client] -%>
+client = yes
+<% end -%>
+
+<% node[:stunnel][:services].each do |service,config| -%>
+[<%= service %>]
+<% config.each do |k,v| -%>
+<%= k %> = <%= v %>
+<% end -%>
+<% end -%>

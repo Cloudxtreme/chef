@@ -1,0 +1,58 @@
+# Fail2Ban configuration file
+#
+# Author: Cyril Jaquier
+#
+# $Revision: 617 $
+#
+
+# The DEFAULT allows a global definition of the options. They can be override
+# in each jail afterwards.
+
+[DEFAULT]
+
+# "ignoreip" can be an IP address, a CIDR mask or a DNS host. Fail2ban will not
+# ban a host which matches an address in this list. Several addresses can be
+# defined using space separator.
+ignoreip = 127.0.0.1 <% node[:security][:fail2ban][:ignoreips].each do |ip| %><%= ip %> <% end %>
+
+# "bantime" is the number of seconds that a host is banned.
+bantime  = 86400
+
+# A host is banned if it has generated "maxretry" during the last "findtime"
+# seconds.
+findtime  = 600
+
+# "maxretry" is the number of failures before a host get banned.
+maxretry = 6
+
+# "backend" specifies the backend used to get files modification. Available
+# options are "gamin", "polling" and "auto". This option can be overridden in
+# each jail too (use "gamin" for a jail and "polling" for another).
+#
+# gamin:   requires Gamin (a file alteration monitor) to be installed. If Gamin
+#          is not installed, Fail2ban will use polling.
+# polling: uses a polling algorithm which does not require external libraries.
+# auto:    will choose Gamin if available and polling otherwise.
+backend = auto
+
+
+# This jail corresponds to the standard configuration in Fail2ban 0.6.
+# The mail-whois action send a notification e-mail with a whois request
+# in the body.
+
+[ssh-iptables]
+
+enabled  = true
+filter   = sshd
+action   = iptables[name=SSH, port=ssh, protocol=tcp]
+#           sendmail-whois[name=SSH, dest=root, sender=fail2ban@example.com]
+logpath  = /var/log/secure
+maxretry = 6
+
+[sasl-auth]
+
+enabled = true
+filter = sasl
+action = iptables[name=SMTP, port=smtp, protocol=tcp]
+logpath = /var/log/maillog
+maxretry = 1

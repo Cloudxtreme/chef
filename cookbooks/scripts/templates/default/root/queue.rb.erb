@@ -1,0 +1,7 @@
+#!/usr/local/ruby/bin/ruby
+
+require 'posix_mq'
+require 'ftools'
+
+POSIX_MQ.new("/backups", :rw, nil, POSIX_MQ::Attr.new(0, 512, 8192, 0))
+File.chown(2002, 2002, '/dev/mqueue/backups')

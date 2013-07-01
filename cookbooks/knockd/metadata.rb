@@ -1,0 +1,5 @@
+maintainer       "Asim, Example.com"
+maintainer_email "asim@example.com"
+license          "knockd 0.5"
+description      "Installs/Configures knockd"
+version          "0.7"

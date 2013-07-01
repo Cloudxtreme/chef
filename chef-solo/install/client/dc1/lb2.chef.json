@@ -1,0 +1,88 @@
+{
+  "common": {
+    "hosts": {
+      "80.32.120.91": [ "server23" ],
+      "80.32.120.58": [ "server3" ],
+      "10.0.0.33": [ "chef.localdomain" ]
+    },
+
+    "users": { "create": false }
+  },
+
+  "postfix": {
+    "catch-all": "catch-all@example.com",
+    "inet_interfaces": "localhost"
+  },
+
+  "monit": {
+    "mmonit": {
+      "hosts": [ "10.0.0.33:8080" ]
+    },
+
+    "gmond": {
+      "mem": "350.0"
+    },
+
+    "network": "10.0.0.0/24"
+  },
+
+  "keepalived": {
+    "id": "DC1",
+    "set_virtualhost": true,
+    "interface": "eth3",
+    "groups": [ "DC1_1" ],
+    "hosts": {
+      "web1": "10.0.0.29",
+      "web2": "10.0.0.30",
+      "web3": "10.0.0.31",
+      "web4": "10.0.0.32",
+      "web5": "10.0.0.34",
+      "web6": "10.0.0.17",
+      "web7": "10.0.0.18"
+
+    },
+
+    "GC_1": {
+      "group": "DC1_1",
+      "virtual_router_id": "51",
+      "virtual_ips": [
+        { "vip": "80.32.120.67", "domain": "dc1.example.com", "path": "/health-check", "digest": "444bcb3a3fcf8389296c49467f27e1d6", "https_method": "SSL_GET" }
+      ]
+    }
+  },
+
+  "ganglia": {
+    "host": "10.0.0.33",
+    "port": "8649",
+    "name": "dc1"
+  },
+
+  "iptables": {
+    "location": "dc1",
+    "role": "lb2"
+  },
+
+  "ntp": {
+    "servers": [
+      "0.uk.pool.ntp.org",
+      "1.uk.pool.ntp.org",
+      "2.uk.pool.ntp.org",
+      "3.uk.pool.ntp.org"
+    ]
+  },
+
+  "run_list": [    
+    "recipe[common]",
+    "recipe[common::hosts]",
+    "recipe[iptables::server]",
+    "recipe[security]",
+    "recipe[ganglia]",
+    "recipe[ntp]",
+    "recipe[timezone]",
+    "recipe[postfix]",
+    "recipe[keepalived::slave]",
+    "recipe[monit::lb]",
+    "recipe[logrotate]",
+    "recipe[cron::gmetric_tcp_connections]"
+  ]
+}

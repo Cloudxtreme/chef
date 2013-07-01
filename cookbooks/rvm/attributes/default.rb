@@ -1,0 +1,5 @@
+default[:rvm][:version] = "1.6.9"
+default[:rvm][:url] = "https://raw.github.com/wayneeseguin/rvm/master/binscripts/rvm-installer"
+default[:rvm]["ruby19_version"] = "1.9.2-p180"
+default[:rvm]["ruby18_version"] = "1.8.7-p334"
+default[:rvm]["ree_version"] = "1.8.7-2011.03"

@@ -1,0 +1,5 @@
+maintainer	"Asim, Example.com"
+maintainer_email  "asim@example.com"
+license 		"openmq"
+description 	"Installs and configures openmq"
+version 		"0.7"

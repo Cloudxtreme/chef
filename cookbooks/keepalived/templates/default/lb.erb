@@ -1,0 +1,61 @@
+#!/bin/bash
+
+# This script is to drop and add servers in the load balancer
+
+IPS=( <%= node[:keepalived][:virtual_ips].map {|x| x[:vip]}.join(" ") %> )
+
+function up {
+    hostname=$1
+    realip=$2
+    rport=http
+    rports=https
+    for virtualip in ${IPS[@]}; do
+        echo "$hostname ($realip) up virtual ip: $virtualip"
+        /sbin/ipvsadm -e -t $virtualip:http -r $realip:$rport -g -w 1
+        /sbin/ipvsadm -e -t $virtualip:https -r $realip:$rports -g -w 1
+    done
+}
+
+function down {
+    hostname=$1
+    realip=$2
+    rport=http
+    rports=https
+    for virtualip in ${IPS[@]}; do
+        echo "$hostname ($realip) down virtual ip: $virtualip"
+        /sbin/ipvsadm -e -t $virtualip:http -r $realip:$rport -g -w 0
+        /sbin/ipvsadm -e -t $virtualip:https -r $realip:$rports -g -w 0
+    done
+}
+
+function usage {
+    echo $"Usage: $0 {up|down} [<%= node[:keepalived][:hosts].keys.join("|") %>]"
+    exit 1
+}
+
+function case2 {
+    case "$1" in
+	<% node[:keepalived][:hosts].each do |host,ip| %>
+        <%= host %>)
+            IP=<%= ip %>
+            ;;
+	<% end %>
+        *)
+            usage
+esac
+}
+
+case "$1" in
+    up)
+        case2 "$2" 
+        up "$2" "$IP"
+        ;;
+    down)
+        case2 "$2"
+        down "$2" "$IP"
+        ;;
+    *)
+        usage
+esac
+
+exit $?

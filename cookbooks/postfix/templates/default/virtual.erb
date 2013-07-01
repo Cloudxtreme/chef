@@ -1,0 +1,14 @@
+# virtual - LHS is the incoming email address and the RHS is the local recipient
+# or alias, like this:
+# .com                  postmaster
+#
+# After change, run "postmap /etc/postfix/virtual"
+# Catchalls go at the bottom. 
+
+<% if node[:postfix].has_key?("catch-all") -%>
+@<%= node[:postfix][:hostname][/^.+\..+/] ? node[:postfix][:hostname] : "#{node[:postfix][:hostname]}.localdomain" %>	<%= node[:postfix][:"catch-all"] %>
+<% end -%>
+
+<% node[:postfix][:virtual_maps].each do |map| -%>
+<%= map %>
+<% end -%>

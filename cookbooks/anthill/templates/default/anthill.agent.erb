@@ -1,0 +1,133 @@
+#!/bin/sh
+#
+# == BEGIN INSTALL MODIFICATIONS ===============================================
+#
+# Startup script for the Anthill3 agent
+#
+# chkconfig: 345 80 20
+# description: Anthill3 agent process
+# processname: ah3agent
+# pidfile: /var/run/ah3agent.pid
+
+ANTHILL_PROG="agent"
+ANTHILL_HOME="/usr/local/anthill3/<%= node[:anthill][:hostname] %>"
+
+# == END INSTALL MODIFICATIONS =================================================
+
+AH3_NAME=ah3$ANTHILL_PROG
+ANT_HOME="$ANTHILL_HOME/opt/apache-ant-1.7.1"
+GROOVY_HOME="$ANTHILL_HOME/opt/groovy-1.7.4"
+ANTHILL_USER=builder
+ANTHILL_GROUP=builder
+SCRIPT="$ANTHILL_HOME/bin/$AH3_NAME"
+
+# Source function library.
+if [ -x /etc/rc.d/init.d/functions ]; then
+  . /etc/rc.d/init.d/functions
+fi
+
+RETVAL=0
+
+ANTHILL_PID=/var/run/$AH3_NAME.pid
+
+# -- Option Implementations ----------------------------------------------------
+
+start () {
+  touch $ANTHILL_PID
+  echo -n "Starting $AH3_NAME: "
+
+  PID=$(cat $ANTHILL_PID)
+
+  if [ -n "$PID" ]; then
+    if [ -d "/proc/$PID" ]; then
+      echo "process is already running"
+      return 1
+    else
+      echo "found stale pid"
+    fi
+  fi
+
+  if [ ! -z "$ANTHILL_GROUP" ]; then
+    chown "$ANTHILL_USER:$ANTHILL_GROUP" $ANTHILL_PID
+  else
+    chown "$ANTHILL_USER" $ANTHILL_PID
+  fi
+
+  if [ -x /etc/rc.d/init.d/functions ]; then
+    daemon --user "$ANTHILL_USER" "$SCRIPT" start $ANTHILL_PID
+  else
+    su - "$ANTHILL_USER" -c "\"$SCRIPT\" start $ANTHILL_PID"
+  fi
+
+  RETVAL=$?
+  echo
+  [ $RETVAL = 0 ] && touch /var/lock/$AH3_NAME
+  return $RETVAL
+}
+
+stopper () {
+  SHUTDOWN_WAIT=5
+  echo -n "Stopping $AH3_NAME: "
+
+  if [ -f /var/lock/$AH3_NAME ] ; then
+    if [ -x /etc/rc.d/init.d/functions ]; then
+      daemon --force --user "$ANTHILL_USER" "$SCRIPT" stop $ANTHILL_PID
+    else
+      su - "$ANTHILL_USER" -c "\"$SCRIPT\" stop $ANTHILL_PID"
+    fi
+    RETVAL=$?
+
+    sleep 3
+
+    if [ $RETVAL = 0 ]; then
+      count=0;
+
+      if [ -f /var/run/$AH3_NAME.pid ]; then
+
+        read kpid < /var/run/$AH3_NAME.pid
+        let kwait=$SHUTDOWN_WAIT
+        until [ `ps -T $kpid | grep -c $kpid` = '0' ] || [ $count -gt $kwait ]; do
+          echo "waiting for processes to exit";
+          sleep 2
+          let count=$count+1;
+        done
+
+        if [ $count -gt $kwait ]; then
+          echo "didn't stop after $((SHUTDOWN_WAIT*2)) seconds; force killing process"
+          kill $kpid
+        fi
+      fi
+      /bin/rm -f /var/lock/$AH3_NAME /var/run/$AH3_NAME.pid
+    fi
+  fi
+  echo
+}
+
+# -- Execute -------------------------------------------------------------------
+
+case "$1" in
+  start)
+    start
+    ;;
+  stop)
+    stopper
+    ;;
+  restart)
+    stopper
+    sleep 2
+    start
+    ;;
+  condrestart)
+    if [ -f /var/run/$AH3_NAME.pid ]; then
+      stopper
+      start
+    fi
+    ;;
+  *)
+    echo "Usage: $AH3_NAME {start|stop|restart|condrestart}"
+    exit 1
+esac
+
+exit $RETVAL
+
+

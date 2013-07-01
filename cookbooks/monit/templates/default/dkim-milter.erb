@@ -1,0 +1,5 @@
+check process dkim-milter with pidfile /var/run/dkim-milter/dkim-milter.pid
+        group servers
+        start program "/etc/init.d/dkim-milter start"
+        stop program "/etc/init.d/dkim-milter stop"
+        if failed host 127.0.0.1 port 20209 timeout 10 seconds for 3 cycles then restart

@@ -1,0 +1,5 @@
+<% node[:sudoers][:include].each do |user,commands| -%>
+<% commands.each do |command| -%>
+<%= user %> ALL = NOPASSWD: <%= command %>
+<% end -%>
+<% end -%>

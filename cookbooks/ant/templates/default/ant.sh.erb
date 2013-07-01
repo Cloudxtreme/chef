@@ -1,0 +1,9 @@
+export ANT_HOME=/usr/local/ant
+
+SET_ANT=true
+
+for dir in ${PATH//:/ }; do 
+    [ "$dir" == "$ANT_HOME/bin" ] && SET_ANT=false
+done
+
+[ "$SET_ANT" == "true" ] && export PATH=$ANT_HOME/bin:$PATH

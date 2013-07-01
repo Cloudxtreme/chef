@@ -1,0 +1,31 @@
+backup_rrds() {
+  # set variables
+  local rrd_dir=<%= node[:scripts][:functions][:backup_rrds][:rrd_dir] %>
+  local backup_dir=<%= node[:scripts][:functions][:backup_rrds][:backup_dir] %>
+  local backup_file=<%= node[:scripts][:functions][:backup_rrds][:backup_file] %>.$(date +"%Y%m%d").tar.gz
+  local remote_host=<%= node[:scripts][:functions][:backup_rrds][:remote_host] %>
+  local remote_dir=<%= node[:scripts][:functions][:backup_rrds][:remote_dir] %>
+  local do_transfer=<%= node[:scripts][:functions][:backup_rrds][:do_transfer] %>
+
+  # check for null values
+  for variable in $rrd_dir $backup_dir $backup_file $remote_host $remote_dir; do
+    if [ -z "$variable" ]; then	       
+      return 1
+    fi     
+  done
+
+  # create backup dir
+  if [ ! -d "$backup_dir" ]; then
+    mkdir -p "$backup_dir"
+  fi
+
+  # remove archived files
+  find $backup_dir -name "$backup_file.20*" -mtime +7 -exec rm {} \;
+
+  # backup
+  tar zcf $backup_dir/$backup_file $rrd_dir &> /dev/null
+
+  if [ $? -eq 0 ] && [ "$do_transfer" == "true" ]; then
+    scp $backup_dir/$backup_file $remote_host:$remote_dir
+  fi
+}

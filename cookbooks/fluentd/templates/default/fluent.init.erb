@@ -1,0 +1,61 @@
+#!/bin/bash
+#
+# description: fluentd
+# chkconfig: 345 95 30
+# 
+
+PIDFILE=/var/run/fluent.pid
+LOGFILE=/var/log/fluent.log
+CONFIG=/etc/fluent/fluent.conf
+USER=fluent
+GROUP=fluent
+GEMSET="1.9.2@fluentd"
+OPTIONS="-d $PIDFILE --user $USER --group $GROUP -o $LOGFILE -c $CONFIG"
+
+[ -f $PIDFILE ] && PID=`cat $PIDFILE`
+
+set_env() {
+  if [ -f /usr/local/rvm/scripts/rvm ]; then
+    . /usr/local/rvm/scripts/rvm
+    rvm $GEMSET
+  fi
+}
+
+start() {
+  if [ -n "$PID" ] && [ $(ps -p $PID -o command | grep fluent | grep -v grep | wc -l) -ge 1 ]; then
+    echo "fluentd is already running"
+  else
+    echo "starting fluentd"
+    fluentd $OPTIONS
+  fi
+}
+
+stop() {
+  if [ -n "$PID" ] && [ $(ps -p $PID -o command | grep fluent | grep -v grep | wc -l) -ge 1 ]; then
+    echo "stopping fluentd"
+    kill $PID && rm -f $PIDFILE
+  else
+    echo "fluentd is not running"
+  fi
+
+  [ -f $PIDFILE ] && rm -f $PIDFILE
+}
+
+restart() {
+  stop
+  sleep 5
+  start
+}
+
+case "$1" in
+     start|stop|restart)
+     set_env
+     $1
+     ;;
+     *)
+     echo "usage: $0 {start|stop|restart}"
+     exit 1
+esac
+
+
+exit $?

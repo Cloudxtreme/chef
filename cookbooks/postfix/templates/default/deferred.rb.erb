@@ -1,0 +1,71 @@
+#!/usr/local/ruby/bin/ruby
+require 'net/smtp'
+
+EMAILS = [ 'admin@example.com' ] 
+LOGDIR = "/tmp"
+STATUS = {
+	  "yahoo" => "yahoo.*refused to talk to me",
+	  "hotmail" => "@hotmail.co(\.uk|m).*delivery temporarily suspended: lost connection"
+	}	
+
+# Send emails
+def email(message, from, to, subject)
+msg = <<EOF
+From: #{from}
+To: #{to}
+Subject: #{subject}
+#{message}
+EOF
+
+  Net::SMTP.start('10.0.1.3') do |smtp|
+    smtp.send_message msg, from, to
+  end
+end
+
+def hotmail(log)
+  lost = `wc -l #{log}`.split(" ").first.to_i
+  if lost >= 1
+    msg = "Hotmail has dropped #{lost} connections\nexample:\n#{open(log).gets}"
+    EMAILS.each do |addr|
+      email(msg, '<%= @hostname %>@example.com', addr, "Hotmail has dropped #{lost} connections")
+    end
+  end
+  File.delete(log)
+end
+
+def yahoo(log)
+  temporary=`grep 'temporarily deferred' #{log} | wc -l`.chomp.to_i
+  permanent=`grep 'permanently deferred' #{log} | wc -l`.chomp.to_i
+  if temporary >= 10 || permanent >= 10
+    msg = "Temporarily deferred: #{temporary}\nPermanently deferred: #{permanent}"
+    EMAILS.each do |addr|
+      email(msg, '<%= @hostname %>@example.com', addr, "Yahoo has deferred emails")
+    end
+  end
+  File.delete(log)
+end
+
+def status
+  STATUS.each do |domain,return_status|
+    log = "#{LOGDIR}/#{domain}.log"
+    send(domain,log) if File.exists?(log)
+  end
+end
+
+# Check for deferred emails and store them in a file
+def check
+  time = (Time.now - 60).strftime("%b %e %H:%M:")
+
+  STATUS.each do |domain, return_status|
+    message = `grep "#{time}.*deferred" /var/log/maillog | grep "#{return_status}"`
+    File.open("#{LOGDIR}/#{domain}.log", "a") { |f| f.puts message } if message.split("\n").length > 0
+  end
+end
+
+# Main
+
+# Exit if there are no arguments
+exit unless ARGV[0]
+
+# Exit the method requested
+send(ARGV[0])

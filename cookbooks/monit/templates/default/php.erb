@@ -1,0 +1,5 @@
+check process php with pidfile <%= node[:monit][:php][:pid_file] %>
+        group servers
+        start program "/etc/init.d/php-fpm start"
+        stop program "/etc/init.d/php-fpm stop"
+        if failed host 127.0.0.1 port 9200 timeout 10 seconds then restart

@@ -1,0 +1,135 @@
+# Feeds ganglia with web server error rate information.
+#
+# Expects logs for 1 minute.
+
+# Defaults
+$GMETRIC = "/usr/bin/gmetric";
+$GMETRIC_ARGS="";
+
+$count200 = 0;
+$count300 = 0;
+$count400 = 0;
+$count500 = 0;
+$countOther = 0;
+$totalResp = 0.0;
+$totalHits = 0;
+$start = time;
+
+$url = "";
+$url_regex = "";
+
+$length = @ARGV;
+if ($length > 0) {
+    $url = shift @ARGV;
+    $url_regex = $url . ' .+';
+
+    $url =~ s/\//_/g;
+    $url =~ s/%//g;
+}
+
+sub broadcast {
+    my $metric = shift;
+    my $value = shift;
+    my $type = shift;
+    my $units = shift;
+    $cmd = "$GMETRIC $GMETRIC_ARGS --name=$metric --value=$value --type=$type --units=$units --dmax=60";
+    $ret = system($cmd) / 256;
+    if ($ret == -1) {
+        print("Unable to send data to ganglia: $!");
+    }
+}
+
+sub avg_resp_time {
+    lock $totalResp;
+
+    if ($totalHits > 0) {
+        broadcast "nginx_avg_resp_time", (($totalResp * 1000) / $totalHits), "float", "avg_resp_time";
+    }
+}
+
+sub avg_resp_time_for_url {
+    lock $totalResp;
+
+    if ($totalHits > 0) {
+        broadcast "nginx_" . $url . "_avg_resp_time", (($totalResp * 1000) / $totalHits), "float", "avg_resp_time";
+    }
+}
+
+sub report_min_for_url {
+    lock $count500;
+    $total = $count200 + $count300 + $count400 + $count500;
+    broadcast "nginx_" . $url . "_200", $count200, "float", "req_per_min" ;
+    broadcast "nginx_" . $url . "_300", $count300, "float", "req_per_min" ;
+    broadcast "nginx_" . $url . "_400", $count400, "float", "req_per_min" ;
+    broadcast "nginx_" . $url . "_500", $count500, "float", "req_per_min" ;
+    broadcast "nginx_" . $url . "_Total", $total, "float", "req_per_min" ;
+}
+
+sub report_min {
+    lock $count500;
+    $total = $count200 + $count300 + $count400 + $count500 + $countOther;
+    broadcast "nginx__200", $count200, "float", "req_per_min" ;
+    broadcast "nginx__300", $count300, "float", "req_per_min" ;
+    broadcast "nginx__400", $count400, "float", "req_per_min" ;
+    broadcast "nginx__500", $count500, "float", "req_per_min" ;
+    broadcast "nginx__other", $countOther, "float", "req_per_min" ;
+    broadcast "nginx__Total", $total, "float", "req_per_min" ;
+}
+
+sub report {
+    lock $count500;
+    $total = $count200 + $count300 + $count400 + $count500 + $countOther;
+    $delta = 60;
+    $totalRate = $total / $delta;
+    $twoRate = $count200 / $delta;
+    $threeRate = $count300 / $delta;
+    $fourRate = $count400 / $delta;
+    $fiveRate = $count500 / $delta;
+    $otherRate = $countOther / $delta;
+    broadcast "nginx_200", $twoRate, "float", "req_per_sec" ;
+    broadcast "nginx_300", $threeRate, "float", "req_per_sec" ;
+    broadcast "nginx_400", $fourRate, "float", "req_per_sec" ;
+    broadcast "nginx_500", $fiveRate, "float", "req_per_sec" ;
+    broadcast "nginx_other", $otherRate, "float", "req_per_sec" ;
+    broadcast "nginxTotal", $totalRate, "float", "req_per_sec" ;
+}
+
+sub parse_line {
+    my $line = shift;
+    $_ = $line;
+
+    # get number of requests
+    if (/$url_regex\" 5\d\d /) {
+        $count500++;
+    } elsif (/$url_regex\" 2\d\d /) {
+        $count200++;
+    } elsif (/$url_regex\" 3\d\d /) {
+        $count300++;
+    } elsif (/$url_regex\" 4\d\d /) {
+        $count400++;
+    } else {
+        $countOther++;
+    }
+
+    # get response times
+    if (m/$url_regex" "(\d+\.\d+)"\s+$/) {
+        $totalResp += $1;
+        $totalHits++;
+    }
+
+    lock $count500;
+}
+
+# read the lines and then send them to ganglia
+while (<>) {
+    parse_line $_;
+}
+
+if ($url) {
+    report_min_for_url;
+    avg_resp_time_for_url;
+} else {
+    report_min;
+    report;
+    avg_resp_time;
+}

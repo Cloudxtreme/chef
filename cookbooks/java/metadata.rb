@@ -1,0 +1,5 @@
+maintainer	"Asim, Example.com"
+maintainer_email  "asim@example.com"
+license 		"java"
+description 	"Installs and configures java"
+version 		"0.7"

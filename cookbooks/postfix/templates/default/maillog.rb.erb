@@ -1,0 +1,73 @@
+#!/usr/local/ruby/bin/ruby
+require "rubygems"
+require "redis"
+require "eventmachine"
+require "eventmachine-tail"
+
+LOG = "/var/log/maillog"
+R = Redis.new(:host => "10.0.10.2")
+
+class Reader < EventMachine::FileTail
+  def initialize(path, startpos=-1)
+    super(path, startpos)
+    @buffer = BufferedTokenizer.new
+    @counters = { :m => 0 }
+  end
+
+  def self.parse(line)
+    { :time => line[2], :hostname => line[3], :postfix => line[4][/^postfix-([^\/]+)\/smtp.*/,1], :message_id => line[5], :message => line[6..-1] }
+  end
+
+  def increment(counter)
+    @counters[counter] ||= 0
+    @counters[counter] += 1
+  end
+
+  def receive_data(data)
+    @buffer.extract(data).each do |line|
+      if line.match(/ postfix-10\.1\.5\.[0-9]{1,3}\/smtp\[/)
+	nl = Reader.parse(line.split(" "))
+
+	case 
+	when line.match(/ status=sent /)
+	  # log some shit like numbers of emails sent
+	  increment("sent:#{nl[:postfix]}")
+	when line.match(/ status=deferred /)
+	  # log some shit about deferred emails	  
+          increment("deferred:#{nl[:postfix]}")
+	when line.match(/ status=bounced /)
+	  # log some shit about being bounced
+          increment("bounced:#{nl[:postfix]}")
+	when nl[:message][0] == "conversation"
+	  # log some shit about conversation problems
+          increment("conversations:#{nl[:postfix]}")
+        when nl[:message][0] == "lost"
+          # log some shit about lost connections
+          increment("lost:#{nl[:postfix]}")
+	when nl[:message][0] == "host"
+	  # log some shit about the host not talking to me	
+          increment("host:#{nl[:postfix]}")
+	when nl[:message_id] == "connect"
+	  # log some shit about connection issues
+	  increment("connect:#{nl[:postfix]}")
+	end
+      end
+
+      # if the minute has rolled over then send the data to redis
+      this_m = nl ? nl[:time].split(":")[1].to_i : Time.now.min
+      if this_m > @counters[:m] || (this_m == 0 && @counters[:m] == 59)
+        @counters.each do |k,v|
+          v += R[k].to_i unless this_m == 1
+          R.set(k, v)
+          # reset the counter
+          @counters[k] = 0
+        end
+        @counters[:m] = this_m
+      end
+    end
+  end
+end
+
+EventMachine.run do
+  EventMachine::file_tail(LOG, Reader)
+end

@@ -1,0 +1,5 @@
+default[:ruby][:dir] = "/usr/local/ruby"
+default[:ruby][:ruby18_version] = "1.8.7-p334"
+default[:ruby][:ruby19_version] = "1.9.2-p180"
+default[:ruby][:ree_version] = "1.8.7-2010.01"
+default[:ruby][:gems_version] = "1.7.2"

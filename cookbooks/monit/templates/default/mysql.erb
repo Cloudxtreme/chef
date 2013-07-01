@@ -1,0 +1,4 @@
+check process mysql
+   with pidfile /usr/local/mysql/data/<%= node[:monit][:hostname] %>.pid
+   group database
+   if failed host 127.0.0.1 port 3306 protocol mysql then alert

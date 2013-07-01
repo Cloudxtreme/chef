@@ -1,0 +1,177 @@
+#! /bin/sh
+### BEGIN INIT INFO
+# Provides:          stunnel
+# Required-Start:    $remote_fs $syslog
+# Required-Stop:     $remote_fs $syslog
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Short-Description: stunnel init.d script for Ubuntu 8.10 and lesser versions.
+# Description:       stunnel init.d script for Ubuntu 8.10 and lesser versions.
+### END INIT INFO
+#------------------------------------------------------------------------------
+# stunnel - this script, which starts and stops the stunnel daemon for ubuntu.
+#
+# description:  Stunnel is an openssl based tunneling server 
+# processname: stunnel
+# config:      /etc/stunnel/stunnel.conf
+# pidfile:     /var/run/stunnel/stunnel.pid
+# Provides:    stunnel
+#
+#------------------------------------------------------------------------------
+#                               Functions
+#------------------------------------------------------------------------------
+. /lib/lsb/init-functions
+
+#------------------------------------------------------------------------------
+#                               Consts
+#------------------------------------------------------------------------------
+PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
+DAEMON=/usr/sbin/stunnel
+
+PS="stunnel"
+PIDFILE=/var/run/stunnel/stunnel.pid                    #pid file
+DESCRIPTION="Stunnel Server..."
+
+RUNAS=root				#user to run as
+
+SCRIPT_OK=0				#ala error codes
+SCRIPT_ERROR=1				#ala error codes
+TRUE=1					#boolean
+FALSE=0					#boolean
+
+lockfile=/var/lock/subsys/stunnel
+STUNNEL_CONF_FILE="/etc/stunnel/stunnel.conf"
+
+#------------------------------------------------------------------------------
+#                               Simple Tests
+#------------------------------------------------------------------------------
+
+#test if stunnel is a file and executable
+test -x $DAEMON || exit 0
+
+# Include stunnel defaults if available
+if [ -f /etc/default/stunnel ] ; then
+        . /etc/default/stunnel
+fi
+
+#set exit condition
+#set -e
+
+#------------------------------------------------------------------------------
+#                               Functions
+#------------------------------------------------------------------------------
+
+getPSCount() {
+	return `pgrep -f $PS | wc -l`
+}
+
+isRunning(){
+	pidof_daemon
+	PID=$?
+
+	if [ $PID -gt 0 ]; then
+		return 1
+        else
+                return 0
+        fi
+}
+
+status(){
+	isRunning
+	isAlive=$?
+
+	if [ "${isAlive}" -eq $TRUE ]; then
+                echo "stunnel found running with processes:  `pidof $PS`"
+        else
+                echo "stunnel is NOT running."
+        fi
+}
+
+removePIDFile(){
+	if [ -f $PIDFILE ]; then
+        	rm -f $PIDFILE
+        fi
+}
+
+start() {
+        log_daemon_msg "Starting $DESCRIPTION"
+	
+	isRunning
+	isAlive=$?
+	
+        if [ "${isAlive}" -eq $TRUE ]; then
+                log_end_msg $SCRIPT_ERROR
+        else
+                start-stop-daemon --start --quiet --chuid $RUNAS --pidfile $PIDFILE --exec $DAEMON
+		log_end_msg $SCRIPT_OK
+        fi
+}
+
+stop() {
+	log_daemon_msg "Stopping $DESCRIPTION"
+	
+	isRunning
+	isAlive=$?
+        if [ "${isAlive}" -eq $TRUE ]; then
+                start-stop-daemon --stop --quiet --pidfile $PIDFILE
+
+		removePIDFile
+
+                log_end_msg $SCRIPT_OK
+        else
+                log_end_msg $SCRIPT_ERROR
+        fi
+}
+
+reload() {
+	configtest || return $?
+
+	log_daemon_msg "Reloading (via HUP) $DESCRIPTION"
+
+        isRunning
+        if [ $? -eq $TRUE ]; then
+		`killall -HUP $PS` #to be safe
+
+                log_end_msg $SCRIPT_OK
+        else
+                log_end_msg $SCRIPT_ERROR
+        fi
+}
+
+pidof_daemon() {
+    PIDS=`pidof $PS` || true
+
+    [ -e $PIDFILE ] && PIDS2=`cat $PIDFILE`
+
+    for i in $PIDS; do
+        if [ "$i" = "$PIDS2" ]; then
+            return 1
+        fi
+    done
+    return 0
+}
+
+case "$1" in
+  start)
+	start
+        ;;
+  stop)
+	stop
+        ;;
+  restart|force-reload)
+	stop
+	start
+        ;;
+  reload)
+	$1
+	;;
+  status)
+	status
+	;;
+  *)
+	echo "Usage: $0 {start|stop|restart|force-reload|status}"
+	exit 1
+	;;
+esac
+
+exit 0

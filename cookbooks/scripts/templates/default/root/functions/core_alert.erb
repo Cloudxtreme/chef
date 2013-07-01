@@ -1,0 +1,6 @@
+core_alert() {
+    # If there are cores less than a minute old notify us
+    if (find /cores -maxdepth 1 -mmin -1 -not -name "*.gz" | grep -q core.[1-9]); then
+	/root/scripts/sms.pl "cores on $HOSTNAME"
+    fi
+}

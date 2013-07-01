@@ -1,0 +1,95 @@
+#!/usr/local/ruby/bin/ruby
+
+require 'posix_mq'
+require 'ftools'
+$stdout.sync = true
+
+
+unless ARGV[0]
+  puts "Require host e.g sb.example.com"
+  exit
+end
+
+# The hosts to scp to
+HOST = ARGV[0]
+SPACE = "<%= node[:scripts][:backup_host] %>"
+
+# Calculate some rates so we dont use voip lines during working hours
+RATE = {
+	  "sb.example.com" => 10240,
+	  "sb2.example.com" => 700,
+	  "sb3.example.com" => 550,
+	  "sb4.example.com" => 400
+	}
+
+def download?(db)
+  if HOST.match(/^sb[2-4]\.example\.com$/)
+    kbps = RATE[HOST]
+    date = Time.now
+    cutoff = Time.local(date.year, date.month, date.day, 7, 3, 0)
+    size = File.size(db) / 1024
+    dltime = size / kbps
+   
+    (Time.now + dltime) < cutoff
+  else
+    true
+  end
+end
+
+def running?
+  if File.exists?("/var/run/workers/#{HOST}.pid")
+    pid = File.read("/var/run/workers/#{HOST}.pid").chomp
+
+    File.directory?("/proc/#{pid}")
+  else
+    false
+  end
+end
+
+def create_pid_file
+  unless running?
+    File.open("/var/run/workers/#{HOST}.pid", 'w') { |f| f.puts $$ }
+  else
+    puts "Already running a worker for #{HOST}"
+    exit
+  end
+end
+
+def scp(file, location, host)
+#  puts "Starting scp of #{file}"
+  `scp #{file} #{host}:#{location}`
+  if $?.exitstatus == 0
+    puts "SCP SUCCESS #{file} to #{host}" unless file.match(/\.sha1sum$/)
+  else
+    puts "SCP FAILURE #{file} to #{host}"
+    @mq << file unless file.match(/\.sha1sum$/)
+    sleep(5)
+  end
+end
+
+def scp_all(db)
+  scp(db, "/home/crontab/database-backups", HOST)
+  scp(db, "/data/database-backups", SPACE)
+  scp("#{db}.sha1sum", "/home/crontab/database-backups", HOST)
+  scp("#{db}.sha1sum", "/data/database-backups", SPACE)
+end
+
+# Start of the real work
+
+create_pid_file
+@mq = POSIX_MQ.new("/backups", :rw)
+
+trap("EXIT") { File.delete("/var/run/workers/#{HOST}.pid") }
+while db = @mq.receive.first
+  if File.exists?(db)
+    if download?(db)
+      scp_all(db)
+    else
+      # It wont download in time
+      @mq << db
+      sleep(5)
+    end
+  else
+    puts "FAILED. Where\'s the DB #{db}?"
+  end
+end

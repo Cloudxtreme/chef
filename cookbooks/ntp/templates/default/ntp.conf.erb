@@ -1,0 +1,30 @@
+driftfile /var/lib/ntp/ntp.drift
+statsdir /var/log/ntpstats/
+
+statistics loopstats peerstats clockstats
+filegen loopstats file loopstats type day enable
+filegen peerstats file peerstats type day enable
+filegen clockstats file clockstats type day enable
+
+<% if node[:ntp][:is_server] -%>
+server 0.pool.ntp.org
+server 1.pool.ntp.org
+server 2.pool.ntp.org
+server 3.pool.ntp.org
+<% else -%>
+<% node[:ntp][:servers].each do |ntpserver| -%>
+server <%= ntpserver %>
+<% end -%>
+<% end -%>
+
+# Undisciplined Local Clock. This is a fake driver intended for backup
+# and when no outside source of synchronized time is available. 
+server  127.127.1.0     # local clock
+fudge   127.127.1.0 stratum 10  
+
+restrict default kod notrap nomodify nopeer noquery
+restrict -6 default kod nomodify notrap nopeer noquery
+
+restrict 127.0.0.1 nomodify
+restrict -6 ::1 nomodify
+

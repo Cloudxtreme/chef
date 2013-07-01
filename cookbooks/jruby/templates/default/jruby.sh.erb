@@ -1,0 +1,9 @@
+export JRUBY_HOME=/usr/local/jruby
+
+SET_JRUBY=true
+
+for dir in ${PATH//:/ }; do 
+    [ "$dir" == "$JRUBY_HOME/bin" ] && SET_JRUBY=false
+done
+
+[ "$SET_JRUBY" == "true" ] && export PATH=$JRUBY_HOME/bin:$PATH
